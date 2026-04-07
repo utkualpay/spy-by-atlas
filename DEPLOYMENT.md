@@ -67,22 +67,20 @@ git push -u origin main
 4. Wait for DNS propagation (5 min to 48 hours, usually ~15 min)
 5. SSL certificate is automatic
 
-## Step 5: Stripe Setup (When Ready for Payments)
+## Step 5: iyzico Setup (When Ready for Payments)
 
-1. Create account at [dashboard.stripe.com](https://dashboard.stripe.com)
-2. Create 3 products:
-   - **Professional** — $9.99/month recurring
-   - **Executive** — $29.99/month recurring
-   - **Enterprise** — Custom (contact form, no Stripe price needed)
-3. Copy each product's **Price ID** (starts with `price_`)
-4. Go to **Developers → API Keys**:
-   - Copy **Publishable key** → `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-   - Copy **Secret key** → `STRIPE_SECRET_KEY`
-5. Go to **Developers → Webhooks**:
-   - Add endpoint: `https://atlasspy.com/api/stripe/webhook`
-   - Events to listen: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-   - Copy **Signing secret** → `STRIPE_WEBHOOK_SECRET`
-6. Add all Stripe env vars to Vercel → Redeploy
+1. Log in to [merchant.iyzipay.com](https://merchant.iyzipay.com)
+2. Go to **Payment Links** (Ödeme Linkleri)
+3. Create two recurring payment links:
+   - **Professional** — $9.99/month (or TRY equivalent)
+   - **Executive** — $29.99/month (or TRY equivalent)
+4. Copy the generated links (format: `https://iyzi.link/XXXXX`)
+5. Add to Vercel environment variables:
+   - `IYZICO_LINK_PROFESSIONAL` → your Professional link
+   - `IYZICO_LINK_EXECUTIVE` → your Executive link
+6. Redeploy
+
+That's it. iyzico payment links handle card collection, 3D Secure, receipts, and recurring billing. No server-side API integration needed.
 
 ## Step 6: Post-Deployment Verification
 
@@ -107,7 +105,7 @@ Test this sequence:
 | Supabase | Free | Free tier: 500MB DB, 50K auth users |
 | Anthropic API | ~$0.003/search | Usage-based, ~$5-15/mo for moderate use |
 | atlasspy.com | ~$9/year | Domain renewal |
-| Stripe | 2.9% + $0.30/txn | Only on actual revenue |
+| iyzico | ~2.49% + commission | Only on actual revenue |
 | **Total at launch** | **~$10-20/month** | Scales with usage |
 
 ## Troubleshooting
@@ -125,7 +123,7 @@ Test this sequence:
 - Verify `ANTHROPIC_API_KEY` is set and valid
 - Check Vercel function logs for specific errors
 
-**Stripe webhooks failing:**
-- Verify webhook endpoint URL is exact
-- Check webhook signing secret matches
-- Test with Stripe CLI: `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+**iyzico payments not working:**
+- Verify payment links are set in env vars (IYZICO_LINK_PROFESSIONAL, IYZICO_LINK_EXECUTIVE)
+- Test links directly in browser to confirm they're active
+- Check iyzico merchant dashboard for transaction status

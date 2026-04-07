@@ -21,7 +21,7 @@
 ### Technical prep
 - [ ] Deploy to atlasspy.com (see DEPLOYMENT.md)
 - [ ] Run full QA on all features
-- [ ] Set up Stripe in test mode, verify payment flow
+- [ ] Set up iyzico payment links, verify payment flow
 - [ ] Set up Google Analytics or Plausible (privacy-respecting alternative)
 - [ ] Set up Formspree notifications to monitor inbound research requests
 - [ ] Create a simple status page (e.g. Instatus free tier)
@@ -149,9 +149,9 @@ Enterprise inquiry (custom pricing, consultancy upsell)
 | Site visitors | Plausible/GA | 500/mo |
 | Demo usage | Internal analytics | 30% of visitors |
 | Free signups | Supabase dashboard | 50 |
-| Free → Paid conversion | Stripe dashboard | 20% |
-| Paid subscribers | Stripe dashboard | 10+ |
-| Churn rate | Stripe dashboard | <10%/mo |
+| Free → Paid conversion | iyzico dashboard | 20% |
+| Paid subscribers | iyzico dashboard | 10+ |
+| Churn rate | iyzico dashboard | <10%/mo |
 | OSINT searches performed | Internal logs | 200/mo |
 | Research requests submitted | Formspree | 5/mo |
 

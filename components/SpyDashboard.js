@@ -758,11 +758,15 @@ export default function SpyDashboard({ user, isDemo }) {
           <div style={{fontSize:32,fontFamily:serif,fontWeight:300,marginBottom:20}}>{p.p}<span style={{fontSize:13,color:C.textDim}}>{p.p!=="Free"&&p.p!=="Custom"?"/mo":""}</span></div>
           {p.f.map((f,j)=><div key={j} style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.textSec,fontWeight:200,marginBottom:6}}><span style={{color:C.gold,fontSize:9}}>&#10022;</span>{f}</div>)}
         </Card>)}</div>
-      <Card style={{padding:28,maxWidth:480}}>
-        <span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>Payment</span>
-        <div style={{marginTop:18,display:"flex",flexDirection:"column",gap:12}}><InputField placeholder="Cardholder name"/><InputField mono placeholder="Card number"/>
-          <div style={{display:"flex",gap:12}}><InputField mono placeholder="MM / YY"/><div style={{width:100}}><InputField mono placeholder="CVC"/></div></div>
-          <GoldBtn full>Subscribe</GoldBtn><div style={{fontSize:10,color:C.textDim,fontFamily:mono,textAlign:"center"}}>Secured by Stripe — Cancel anytime</div></div>
+      <Card style={{padding:28,maxWidth:520}}>
+        <span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>Subscribe</span>
+        <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7,marginTop:12,marginBottom:20}}>Select a plan to proceed to our secure payment page. Payments are processed by iyzico. You can cancel anytime from your account settings.</p>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <GoldBtn full onClick={()=>window.open("/api/payment?tier=professional","_blank")}>Subscribe — Professional ($9.99/mo)</GoldBtn>
+          <GoldBtn full onClick={()=>window.open("/api/payment?tier=executive","_blank")}>Subscribe — Executive ($29.99/mo)</GoldBtn>
+          <button onClick={()=>setPage("consult")} style={{padding:"14px 28px",border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.textSec,fontSize:11,fontFamily:mono,letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer",width:"100%"}}>Enterprise — Contact Us</button>
+        </div>
+        <div style={{fontSize:10,color:C.textDim,fontFamily:mono,textAlign:"center",marginTop:14}}>Secured by iyzico — Cancel anytime</div>
       </Card></div>;
     case"settings":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Settings" subtitle="Configure your intelligence platform."/>
       <Card style={{padding:28}}>

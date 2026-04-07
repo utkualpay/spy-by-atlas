@@ -25,7 +25,7 @@ atlasspy.com/demo       → Demo dashboard (public, limited)
 atlasspy.com/login      → Supabase auth login
 atlasspy.com/signup     → Supabase auth signup
 atlasspy.com/app        → Protected dashboard (requires auth)
-atlasspy.com/api/*      → Server-side API routes (Claude, Stripe, CPIR)
+atlasspy.com/api/*      → Server-side API routes (Claude, iyzico, CPIR)
 ```
 
 All Claude API calls are routed through Next.js API routes. The Anthropic API key is never exposed to the client.
@@ -37,5 +37,5 @@ All Claude API calls are routed through Next.js API routes. The Anthropic API ke
 | Supabase | Auth + Database | Free tier |
 | Anthropic | OSINT, Intel, Breach, Footprint searches | Usage-based |
 | Vercel | Hosting | Free tier |
-| Stripe | Payments (optional at launch) | Transaction-based |
+| iyzico | Payments (link-based) | Transaction-based |
 | Formspree | Research request forms | Free tier |
