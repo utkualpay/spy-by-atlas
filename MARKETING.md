@@ -12,7 +12,7 @@
 3. **Law firms and consultancies** — need competitive intelligence and due diligence tools
 4. **Family offices** — protecting principal's digital presence and reputation
 
-**Pricing psychology:** The Observer (free) tier exists to demonstrate capability. The real product starts at Professional ($9.99). The Enterprise tier is intentionally "Contact Us" — it signals that serious clients get bespoke service.
+**Pricing psychology:** The Observer (free) tier exists to demonstrate capability. The real product starts at Professional ($49). The Enterprise tier is intentionally "Contact Us" — it signals that serious clients get bespoke service.
 
 ---
 
@@ -114,7 +114,7 @@ First scan prompt (email breach check — immediate, tangible value)
     ↓
 Usage limit hit → upgrade prompt
     ↓
-Professional ($9.99/mo) or Executive ($29.99/mo)
+Professional ($49/mo) or Executive ($149/mo)
     ↓
 Enterprise inquiry (custom pricing, consultancy upsell)
 ```
@@ -138,7 +138,7 @@ Enterprise inquiry (custom pricing, consultancy upsell)
 | LinkedIn ads (optional) | $200-500 | Target: cybersecurity professionals, C-suite |
 | Total | **$215-520/mo** | Conservative estimate |
 
-**Break-even:** ~22 Professional subscribers or ~8 Executive subscribers covers all costs including optional ads.
+**Break-even:** ~5 Analyst subscribers or ~2 Director subscribers covers all costs including optional ads.
 
 ---
 
