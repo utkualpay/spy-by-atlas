@@ -2,6 +2,11 @@ export const metadata = {
   title: "Spy by Atlas — Intelligence as a Service",
   description: "Private intelligence platform for individuals and organizations requiring continuous awareness of their digital exposure, competitive landscape, and global threat environment.",
   metadataBase: new URL("https://atlasspy.com"),
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   openGraph: {
     title: "Spy by Atlas — Intelligence as a Service",
     description: "Know everything. Before everyone.",

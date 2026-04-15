@@ -91,12 +91,68 @@ return <div style={{animation:"fadeIn 0.4s ease"}}><Card style={{padding:40,maxW
 </Card></div>;}
 
 // ── WORLD MAP ────────────────────────────────────────────────────────
-function WorldMap({zones,sel,onSelect}){const tx=l=>((l+180)/360)*800,ty=l=>((90-l)/180)*450;const tc={war:C.critical,insurgency:C.high,tension:C.medium,instability:C.high};
-return <svg viewBox="0 0 800 450" style={{width:"100%",background:C.bgCard,borderRadius:4}}><rect width="800" height="450" fill="rgba(196,162,101,0.02)"/>
-{Array.from({length:17},(_,i)=><line key={`v${i}`} x1={i*50} y1={0} x2={i*50} y2={450} stroke={C.border} strokeWidth={.3} opacity={.4}/>)}
-{Array.from({length:10},(_,i)=><line key={`h${i}`} x1={0} y1={i*50} x2={800} y2={i*50} stroke={C.border} strokeWidth={.3} opacity={.4}/>)}
-{zones.map(z=>{const cx=tx(z.lng),cy=ty(z.lat),c=tc[z.type]||C.medium,s=sel?.id===z.id;return <g key={z.id} onClick={()=>onSelect(z)} style={{cursor:"pointer"}}><circle cx={cx} cy={cy} r={s?18:12} fill={c} opacity={.08}><animate attributeName="r" values={`${s?18:12};${s?26:18};${s?18:12}`} dur="3s" repeatCount="indefinite"/></circle><circle cx={cx} cy={cy} r={s?4:2.5} fill={c} opacity={.9}/>{s&&<circle cx={cx} cy={cy} r={7} fill="none" stroke={c} strokeWidth={.8} opacity={.5}/>}</g>;})}
-</svg>;}
+function WorldMap({zones,sel,onSelect}){
+  const tx=l=>((l+180)/360)*800,ty=l=>((90-l)/180)*450;
+  const tc={war:C.critical,insurgency:C.high,tension:C.medium,instability:C.high};
+  // Simplified but recognizable Mercator continent polygons
+  const lands=[
+    // North America
+    "M45,65 L60,55 L80,58 L105,60 L130,58 L148,63 L160,70 L168,60 L180,55 L200,58 L218,62 L230,58 L242,65 L250,72 L252,82 L248,95 L240,108 L232,115 L228,125 L220,135 L215,145 L210,148 L200,152 L193,158 L185,168 L180,175 L175,172 L178,160 L182,150 L180,140 L172,130 L165,125 L155,120 L148,115 L140,112 L128,110 L118,108 L110,105 L105,100 L100,92 L92,88 L82,82 L72,78 L60,75 L52,72 Z",
+    // Central America + Caribbean
+    "M175,172 L180,175 L188,180 L195,185 L200,190 L205,195 L210,200 L215,198 L218,202 L215,208 L208,206 L200,200 L192,195 L185,188 L178,182 Z",
+    // South America
+    "M218,202 L228,198 L240,202 L252,208 L262,212 L275,218 L288,228 L298,238 L302,250 L300,262 L295,275 L288,288 L280,300 L272,312 L265,322 L258,332 L252,340 L248,350 L245,355 L242,345 L240,332 L238,318 L236,305 L235,290 L234,275 L232,260 L228,248 L225,238 L222,228 L218,218 L215,210 Z",
+    // Europe
+    "M375,50 L390,48 L400,52 L408,55 L415,52 L425,55 L435,50 L445,52 L455,48 L462,52 L468,58 L472,65 L470,72 L465,80 L460,88 L455,95 L458,100 L462,108 L460,115 L455,120 L448,125 L440,122 L432,118 L425,112 L418,108 L410,110 L405,115 L398,118 L390,120 L385,125 L380,128 L375,122 L378,115 L382,108 L380,100 L375,92 L370,85 L368,78 L370,68 L372,60 Z",
+    // UK + Ireland
+    "M370,62 L375,58 L380,60 L382,65 L380,72 L376,78 L372,75 L370,68 Z",
+    "M365,65 L368,62 L370,65 L368,70 L365,68 Z",
+    // Africa
+    "M380,128 L390,130 L400,128 L412,130 L425,128 L438,132 L448,135 L458,140 L465,148 L470,158 L475,168 L480,178 L485,188 L490,195 L495,200 L498,205 L495,212 L490,220 L485,232 L482,242 L478,255 L475,265 L470,275 L465,285 L458,295 L450,305 L445,310 L440,315 L448,318 L455,315 L460,318 L455,322 L445,322 L435,320 L425,315 L415,310 L408,302 L400,295 L392,285 L385,272 L380,260 L378,248 L376,235 L375,222 L374,210 L372,198 L370,185 L370,172 L372,160 L375,148 L378,138 Z",
+    // Asia (mainland)
+    "M468,58 L480,55 L495,52 L510,48 L530,42 L550,38 L570,35 L590,32 L610,30 L630,28 L650,30 L668,32 L680,35 L692,40 L700,45 L708,48 L715,52 L718,58 L715,65 L710,72 L705,80 L700,88 L695,95 L690,105 L685,112 L678,118 L670,125 L665,132 L660,138 L652,145 L642,152 L635,158 L628,165 L620,170 L612,175 L605,178 L598,175 L590,170 L582,165 L575,162 L568,165 L562,172 L555,180 L548,188 L542,192 L535,185 L528,178 L520,172 L512,168 L505,162 L498,155 L492,148 L485,142 L478,135 L472,125 L468,115 L462,108 L458,100 L455,95 L460,88 L465,80 L470,72 Z",
+    // India + SE Asia
+    "M555,148 L565,145 L575,148 L585,152 L592,158 L598,165 L598,175 L592,182 L585,190 L578,198 L572,205 L565,198 L558,188 L552,178 L550,168 L552,158 Z",
+    // Arabian Peninsula
+    "M475,148 L482,142 L492,140 L500,145 L508,152 L515,162 L518,170 L515,178 L508,182 L500,185 L492,182 L486,175 L480,168 L476,158 Z",
+    // Japan
+    "M712,80 L718,75 L720,82 L718,92 L715,100 L712,108 L708,105 L710,95 L712,88 Z",
+    // Australia
+    "M640,248 L655,240 L672,235 L690,235 L705,240 L718,248 L725,258 L728,268 L725,280 L718,288 L710,295 L698,298 L685,298 L672,295 L660,288 L650,278 L645,268 L642,258 Z",
+    // Indonesia/Philippines
+    "M628,210 L642,205 L658,208 L672,212 L685,218 L695,225 L688,230 L675,228 L660,224 L645,220 L632,215 Z",
+    // Greenland
+    "M268,22 L285,18 L302,16 L318,18 L330,25 L335,35 L332,48 L325,55 L315,60 L302,62 L288,58 L278,50 L272,40 L268,30 Z",
+    // New Zealand
+    "M745,310 L748,305 L752,310 L750,318 L748,325 L745,320 Z",
+    // Madagascar
+    "M498,290 L502,285 L505,292 L503,300 L500,298 Z",
+    // Iceland
+    "M348,42 L355,38 L362,42 L360,48 L355,50 L350,48 Z",
+  ];
+  return <svg viewBox="0 0 800 450" style={{width:"100%",background:"#0c0c0e",borderRadius:4}}>
+    <defs>
+      <radialGradient id="mapBg" cx="50%" cy="50%" r="60%"><stop offset="0%" stopColor="rgba(196,162,101,0.03)"/><stop offset="100%" stopColor="transparent"/></radialGradient>
+    </defs>
+    <rect width="800" height="450" fill="url(#mapBg)"/>
+    {/* Grid lines */}
+    {Array.from({length:17},(_,i)=><line key={`v${i}`} x1={i*50} y1={0} x2={i*50} y2={450} stroke={C.border} strokeWidth={.2} opacity={.3}/>)}
+    {Array.from({length:10},(_,i)=><line key={`h${i}`} x1={0} y1={i*50} x2={800} y2={i*50} stroke={C.border} strokeWidth={.2} opacity={.3}/>)}
+    {/* Equator + prime meridian */}
+    <line x1={0} y1={225} x2={800} y2={225} stroke="rgba(196,162,101,0.08)" strokeWidth={.5} strokeDasharray="4,4"/>
+    <line x1={400} y1={0} x2={400} y2={450} stroke="rgba(196,162,101,0.08)" strokeWidth={.5} strokeDasharray="4,4"/>
+    {/* Continents */}
+    {lands.map((d,i)=><path key={i} d={d} fill="rgba(196,162,101,0.07)" stroke="rgba(196,162,101,0.18)" strokeWidth={.6} strokeLinejoin="round"/>)}
+    {/* Conflict markers */}
+    {zones.map(z=>{const cx=tx(z.lng),cy=ty(z.lat),c=tc[z.type]||C.medium,s=sel?.id===z.id;
+      return <g key={z.id} onClick={()=>onSelect(z)} style={{cursor:"pointer"}}>
+        <circle cx={cx} cy={cy} r={s?22:14} fill={c} opacity={.06}><animate attributeName="r" values={`${s?22:14};${s?32:22};${s?22:14}`} dur="3s" repeatCount="indefinite"/></circle>
+        <circle cx={cx} cy={cy} r={s?5:3} fill={c} opacity={.9}/>
+        {s&&<circle cx={cx} cy={cy} r={8} fill="none" stroke={c} strokeWidth={.8} opacity={.6}/>}
+        {s&&<text x={cx} y={cy-12} textAnchor="middle" fill={c} fontSize={8} fontFamily={mono} opacity={.7}>{z.name}</text>}
+      </g>;})}
+  </svg>;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // PAGE: WAR ROOM (#17 — red theme, AI chat)
@@ -345,10 +401,14 @@ return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Situation Map" sub
 // ═══════════════════════════════════════════════════════════════════
 // PAGE: GENERIC ANALYSIS (#1 — each with custom form)
 // ═══════════════════════════════════════════════════════════════════
-function PgAnalysis({module,title,subtitle,fields}){
+function PgAnalysis({module,title,subtitle,fields,apiRoute,bodyKey,extraBody}){
   const[form,setForm]=useState({});const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
   const submit=async()=>{const q=form.query||form.target||form.subject||"";if(!q.trim())return;setLoading(true);setResult(null);
-    try{const r=await fetch("/api/gemini/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:q+(form.context?`\n\nAdditional context: ${form.context}`:""),type:form.type||"general",module})});const d=await r.json();setResult(d);}catch(e){}setLoading(false);};
+    try{
+      const route=apiRoute||"/api/gemini/analyze";
+      const body=apiRoute?{[bodyKey||"query"]:q+(form.context?`\nContext: ${form.context}`:""),...(extraBody||{}),additionalData:form.context||"",context:form.context||"",assets:form.context||"",entityType:form.type||"entity",queryType:form.type||"entity"}:{query:q+(form.context?`\n\nAdditional context: ${form.context}`:""),type:form.type||"general",module};
+      const r=await fetch(route,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();setResult(d);
+    }catch(e){}setLoading(false);};
   return <div style={{animation:"fadeIn 0.4s ease"}}><SH title={title} subtitle={subtitle}/>
     <Card style={{padding:24,marginBottom:16,maxWidth:600}}>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -357,7 +417,8 @@ function PgAnalysis({module,title,subtitle,fields}){
       </div>
     </Card>
     {loading&&<Loader text="Conducting deep analysis — 30-60 seconds"/>}
-    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{title.toUpperCase()} REPORT</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{title.toUpperCase()} REPORT</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+    {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
   </div>;
 }
 
@@ -481,42 +542,51 @@ function PgImageScan({user}){
 // ═══════════════════════════════════════════════════════════════════
 // PAGE: COMPETITIVE INTELLIGENCE (#18)
 // ═══════════════════════════════════════════════════════════════════
-function PgCompetitors(){
-  const competitors=[
-    {name:"Maltego",cat:"Link Analysis",price:"$1,999/yr",strengths:["Visual relationship mapping","1M+ entity graphs","Transform Hub marketplace","Multi-user collaboration"],weaknesses:["Complex setup","No AI analysis","No daily briefs","Enterprise pricing only"],vsUs:"Maltego excels at visual link analysis. We provide AI-generated intelligence reports — faster results, no training required."},
-    {name:"SL Crimewall",cat:"Investigation Platform",price:"Enterprise",strengths:["500+ data sources","Real-time collaboration","Case management","Dark web monitoring"],weaknesses:["Government/enterprise only","No consumer access","Complex interface","High cost"],vsUs:"Crimewall is built for law enforcement. Spy is built for executives and organizations who need intelligence without the complexity."},
-    {name:"Recorded Future",cat:"Threat Intel",price:"$10K+/yr",strengths:["ML-driven threat feeds","SIEM integration","Predictive analytics","Dark web coverage"],weaknesses:["Enterprise pricing","Requires security team","No personal protection","Integration-heavy"],vsUs:"Recorded Future serves SOC teams. Spy delivers the same intelligence class to individuals and smaller organizations at accessible pricing."},
-    {name:"SpiderFoot",cat:"Recon Tool",price:"Free/OSS",strengths:["200+ modules","Open source","Automated scanning","Self-hostable"],weaknesses:["Technical users only","Raw data output","No analysis","No reports"],vsUs:"SpiderFoot provides raw data. Spy provides analyst-grade intelligence reports with actionable recommendations."},
-    {name:"OSINT Industries",cat:"OSINT Platform",price:"Subscription",strengths:["Identity verification","Law enforcement focus","Fraud detection","Evidence gathering"],weaknesses:["Law enforcement oriented","Limited consumer features","No AI chat","No executive protection"],vsUs:"OSINT Industries serves investigators. Spy adds AI-powered analysis, War Room chat, daily briefs, and executive protection."},
-    {name:"Flashpoint/Echosec",cat:"Threat + OSINT",price:"Enterprise",strengths:["Geospatial intelligence","Physical security","AI enrichment","Dark web monitoring"],weaknesses:["Enterprise only","No self-service","No personal use","Complex onboarding"],vsUs:"Flashpoint provides physical security intelligence to enterprises. Spy democratizes this for individuals and smaller organizations."},
+function PgCapabilities(){
+  const caps=[
+    {cat:"Investigation",items:[
+      {t:"OSINT Search",d:"Formal intelligence reports on emails, usernames, domains, IPs, companies, and individuals. Each search produces a classified-style dossier."},
+      {t:"Link Analysis & Entity Mapping",d:"Map relationships between people, organizations, domains, and digital identities. Visual network analysis with connection strength indicators."},
+      {t:"Identity Verification",d:"Cross-reference identities against public records, corporate registries, professional credentials, and social media for authenticity scoring."},
+      {t:"Fraud Detection",d:"Risk assessment covering financial fraud, identity fraud, BEC indicators, synthetic identity markers, and impersonation detection."},
+      {t:"Evidence Chain Management",d:"Forensic-grade documentation workflows with chain of custody templates, legal compliance guidance, and digital evidence preservation protocols."},
+    ]},
+    {cat:"Monitoring",items:[
+      {t:"Dark Web Intelligence",d:"Monitoring underground forums, credential marketplaces, ransomware group communications, paste sites, and encrypted channel mentions."},
+      {t:"Breach Database Console",d:"Cross-reference credentials against our managed breach database plus AI-powered impact assessment. Admin upload capability for proprietary breach data."},
+      {t:"Social Media Monitoring",d:"Continuous security assessment of Instagram, Twitter/X, and LinkedIn accounts. Privacy exposure, impersonation risks, and social engineering vectors."},
+      {t:"Digital Footprint Analysis",d:"Complete exposure audit across data brokers, public records, web mentions, and social platforms with exposure scoring."},
+      {t:"Image Security Forensics",d:"EXIF metadata extraction, steganography detection, reverse image search, malware scanning, and geolocation data analysis."},
+    ]},
+    {cat:"Threat Intelligence",items:[
+      {t:"Geospatial Intelligence (GEOINT)",d:"Location-based threat assessment covering physical security, infrastructure vulnerabilities, civil unrest risk, and safe haven identification."},
+      {t:"Predictive Threat Forecasting",d:"30/60/90-day threat horizon analysis with confidence levels, impact ratings, and preemptive action recommendations by sector."},
+      {t:"War Room — AI Intelligence Analyst",d:"1-on-1 with a senior AI intelligence analyst. Real-time threat assessment, operational guidance, session persistence, and resolution tracking."},
+      {t:"Intelligence Feed",d:"Live curated intelligence from verified sources. Sector filtering, category classification, severity ratings."},
+      {t:"Situation Map",d:"20+ active conflict zones tracked with data from CFR, ACLED, ICG, ISW, IISS, and SIPRI."},
+    ]},
+    {cat:"Protection",items:[
+      {t:"Executive Protection",d:"Comprehensive exposure assessments for high-value individuals covering digital, physical, and reputational attack surfaces."},
+      {t:"Decoy Deployment (Steganography)",d:"LSB steganographic tracking payloads embedded in images. Trace unauthorized file sharing to the source."},
+      {t:"Document Intelligence",d:"Fuzzy-hash leak detection for edited, translated, or obfuscated documents. Metadata analysis and classification."},
+      {t:"Data Suppression",d:"Automated takedown strategy and SEO burial analysis for unwanted content."},
+      {t:"Case Management",d:"Formal case analysis with evidence tracking, investigative step planning, resource allocation, and resolution timelines."},
+    ]},
+    {cat:"Reporting & Access",items:[
+      {t:"Daily Intelligence Brief",d:"Personalized morning briefs written in professional intelligence language — not AI summaries, intelligence products tailored to your sector."},
+      {t:"Reports Archive",d:"Every analysis auto-saves as a formal classified report. Full archive with type filtering and instant access."},
+      {t:"Insider Threat Assessment (CPIR)",d:"Continuous Psychological Indicator Report with behavioral analysis, risk scoring, and manager analytics."},
+      {t:"24/7 Multilingual Support",d:"English, Turkish, German, French, Spanish, Arabic, Russian, Mandarin."},
+    ]},
   ];
-  const ourEdge=[
-    {t:"AI-Powered Analysis",d:"Every module is powered by Gemini AI. No raw data dumps — formal intelligence reports, written in professional language, saved and accessible."},
-    {t:"War Room",d:"Real-time 1-on-1 with an AI intelligence analyst. No competitor offers this at our price point. Session persistence, resolution tracking."},
-    {t:"Accessible Pricing",d:"$49-149/mo vs $10K+/yr from enterprise competitors. Same intelligence methodology, fraction of the cost."},
-    {t:"All-in-One Platform",d:"OSINT, breach monitoring, social media, executive protection, threat prediction, document intelligence — single platform."},
-    {t:"Human-Quality Reports",d:"Daily briefs that read like they were written by a senior analyst. Not AI-generated summaries — intelligence products."},
-    {t:"Executive Focus",d:"Built for decision-makers, not SOC teams. Clean interface, actionable output, no technical expertise required."},
-  ];
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Competitive Intelligence" subtitle="How Spy by Atlas positions against the intelligence industry. Updated by our competitive analysis team."/>
-    <div style={{marginBottom:24}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>Our Competitive Advantages</div>
-      <div className="sg3" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>{ourEdge.map((e,i)=><Card key={i} style={{padding:20}}><div style={{fontSize:12,fontWeight:400,color:C.gold,marginBottom:6}}>{e.t}</div><div style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6}}>{e.d}</div></Card>)}</div>
-    </div>
-    <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>Competitor Landscape</div>
-    {competitors.map((c,i)=><Card key={i} style={{padding:20,marginBottom:8}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
-        <div><span style={{fontSize:15,fontWeight:500}}>{c.name}</span><span style={{fontSize:10,fontFamily:mono,color:C.textDim,marginLeft:10}}>{c.cat} — {c.price}</span></div>
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Platform Capabilities" subtitle="Full-spectrum intelligence at a fraction of enterprise pricing. Every capability below is operational and accessible from your dashboard."/>
+    <Card style={{padding:20,marginBottom:20,borderColor:C.gold+"30"}}><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Spy by Atlas consolidates capabilities that enterprise platforms charge $10,000-100,000+/year for — into a single, AI-powered platform starting at $49/month. Designed and operated by intelligence professionals. No technical expertise required.</div></Card>
+    {caps.map((cat,ci)=><div key={ci} style={{marginBottom:24}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:12}}>{cat.cat}</div>
+      <div className="sg2" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+        {cat.items.map((item,i)=><Card key={i} style={{padding:18}}><div style={{fontSize:12,fontWeight:400,marginBottom:4}}>{item.t}</div><div style={{fontSize:11,color:C.textDim,fontWeight:200,lineHeight:1.6}}>{item.d}</div></Card>)}
       </div>
-      <div className="sg2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:12}}>
-        <div><div style={{fontSize:10,fontFamily:mono,color:C.low,marginBottom:6}}>STRENGTHS</div>{c.strengths.map((s,j)=><div key={j} style={{fontSize:11,color:C.textSec,fontWeight:200,marginBottom:3}}>+ {s}</div>)}</div>
-        <div><div style={{fontSize:10,fontFamily:mono,color:C.high,marginBottom:6}}>WEAKNESSES</div>{c.weaknesses.map((w,j)=><div key={j} style={{fontSize:11,color:C.textSec,fontWeight:200,marginBottom:3}}>- {w}</div>)}</div>
-      </div>
-      <div style={{padding:"10px 14px",background:C.goldDim,borderRadius:3,fontSize:12,color:C.gold,fontWeight:300,lineHeight:1.5}}>{c.vsUs}</div>
-    </Card>)}
-    <Card style={{padding:20,marginTop:16,borderColor:C.gold+"30"}}>
-      <div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:8}}>Summary Assessment</div>
-      <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7}}>The intelligence platform market is dominated by enterprise solutions priced at $10K-100K+/year, targeting government agencies and large security operations centers. Spy by Atlas occupies a unique position: intelligence-grade capabilities at consumer-accessible pricing ($49-149/mo), powered by AI instead of manual analyst teams. Our primary differentiators are the War Room AI analyst, human-quality daily briefs, and the all-in-one platform approach. The market gap we fill — professional intelligence for individuals, executives, and smaller organizations — has no direct competitor at our price point.</div>
-    </Card>
+    </div>)}
   </div>;
 }
 
@@ -525,10 +595,11 @@ function PgCompetitors(){
 // ═══════════════════════════════════════════════════════════════════
 const NAV=[
   {group:"Operations",items:[{id:"dash",label:"Command Center"},{id:"brief",label:"Daily Brief"},{id:"warroom",label:"War Room"},{id:"intel",label:"Intelligence Feed"},{id:"map",label:"Situation Map"}]},
-  {group:"Investigation",items:[{id:"osint",label:"OSINT Search"},{id:"breaches",label:"Breach Console"},{id:"footprint",label:"Digital Footprint"},{id:"social",label:"Social Monitoring"},{id:"imagescan",label:"Image Security"}]},
-  {group:"Protection",items:[{id:"docintel",label:"Document Intel"},{id:"suppress",label:"Data Suppression"},{id:"decoy",label:"Decoy Deployment"},{id:"execprot",label:"Executive Protection"}]},
-  {group:"Threat Analysis",items:[{id:"predict",label:"Threat Prediction"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"}]},
-  {group:"Services",items:[{id:"reports",label:"Reports Center"},{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"competitors",label:"Competitive Intel"}]},
+  {group:"Investigation",items:[{id:"osint",label:"OSINT Search"},{id:"linkmap",label:"Link Analysis"},{id:"identity",label:"Identity Verification"},{id:"fraud",label:"Fraud Detection"},{id:"breaches",label:"Breach Console"},{id:"darkweb",label:"Dark Web Intel"}]},
+  {group:"Monitoring",items:[{id:"footprint",label:"Digital Footprint"},{id:"social",label:"Social Monitoring"},{id:"imagescan",label:"Image Security"},{id:"geospatial",label:"Geospatial Intel"}]},
+  {group:"Protection",items:[{id:"docintel",label:"Document Intel"},{id:"suppress",label:"Data Suppression"},{id:"decoy",label:"Decoy Deployment"},{id:"execprot",label:"Executive Protection"},{id:"evidence",label:"Evidence Chain"}]},
+  {group:"Threat Analysis",items:[{id:"predict",label:"Threat Prediction"},{id:"predictive",label:"Predictive Forecast"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"},{id:"cases",label:"Case Management"}]},
+  {group:"Services",items:[{id:"reports",label:"Reports Center"},{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
   {group:"System",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"}]},
 ];
 
@@ -603,7 +674,16 @@ export default function SpyDashboard({user,isDemo}){
         <div style={{fontSize:10,color:C.textDim,fontFamily:mono,textAlign:"center",marginTop:12}}>Secured by iyzico</div>
       </Card></div>;
     case"consult":return <PgAnalysis module="threat" title="Consultancy" subtitle="Direct access to our intelligence professionals. Describe your needs." fields={[{key:"query",label:"Subject",placeholder:"What do you need?"},{key:"context",label:"Details",placeholder:"Describe your requirements in full...",area:true}]}/>;
-    case"competitors":return <PgCompetitors/>;    case"settings":return <PgSettings user={user} isDemo={isDemo} setPage={setPage}/>;
+    case"linkmap":return <PgAnalysis module="linkmap" title="Link Analysis" subtitle="Entity relationship mapping — trace connections between people, organizations, domains, and digital identities." fields={[{key:"query",label:"Entity to Map",placeholder:"Person name, company, domain, or email",mono:true},{key:"type",label:"Entity Type",placeholder:"person / company / domain / email / ip"},{key:"context",label:"Known Associations (optional)",placeholder:"Known connections, organizations, industries, geographic ties...",area:true}]} apiRoute="/api/gemini/linkmap" bodyKey="entity" extraBody={{entityType:"entity"}}/>;
+    case"darkweb":return <PgAnalysis module="darkweb" title="Dark Web Intelligence" subtitle="Underground monitoring — forums, credential marketplaces, ransomware groups, paste sites, encrypted channels." fields={[{key:"query",label:"Search Target",placeholder:"Email, domain, company name, or keyword",mono:true},{key:"type",label:"Target Type",placeholder:"email / domain / company / keyword"},{key:"context",label:"Additional Context",placeholder:"Known threat actors, previous incidents, specific concerns...",area:true}]} apiRoute="/api/gemini/darkweb" bodyKey="query" extraBody={{queryType:"entity"}}/>;
+    case"identity":return <PgAnalysis module="identity" title="Identity Verification" subtitle="Cross-reference identities against public records, credentials, and social presence for authenticity scoring." fields={[{key:"query",label:"Full Name",placeholder:"First Last"},{key:"context",label:"Additional Data",placeholder:"Email, company, job title, location, LinkedIn URL, known credentials...",area:true}]} apiRoute="/api/gemini/identity" bodyKey="name" extraBody={{}}/>;
+    case"fraud":return <PgAnalysis module="fraud" title="Fraud Detection" subtitle="Risk assessment covering financial fraud, identity fraud, BEC indicators, and impersonation detection." fields={[{key:"query",label:"Entity to Assess",placeholder:"Person, company, domain, or email",mono:true},{key:"type",label:"Entity Type",placeholder:"person / company / domain / email"},{key:"context",label:"Suspicious Indicators",placeholder:"Describe what prompted this assessment — unusual transactions, impersonation, anomalies...",area:true}]} apiRoute="/api/gemini/fraud" bodyKey="entity" extraBody={{entityType:"entity"}}/>;
+    case"geospatial":return <PgAnalysis module="geospatial" title="Geospatial Intelligence" subtitle="Location-based threat assessment — physical security, infrastructure, civil unrest, and safe haven identification." fields={[{key:"query",label:"Location",placeholder:"City, address, or coordinates"},{key:"context",label:"Context",placeholder:"Purpose of visit, duration, assets at location, specific security concerns...",area:true}]} apiRoute="/api/gemini/geospatial" bodyKey="location" extraBody={{}}/>;
+    case"predictive":return <PgAnalysis module="predictive" title="Predictive Threat Forecast" subtitle="30/60/90-day threat horizon analysis with confidence levels and preemptive recommendations." fields={[{key:"query",label:"Sector / Industry",placeholder:"e.g. Financial Services, Technology, Energy"},{key:"context",label:"Assets & Interests",placeholder:"Specific assets, technologies, geographic exposure, supply chain dependencies...",area:true}]} apiRoute="/api/gemini/predict" bodyKey="sector" extraBody={{}}/>;
+    case"evidence":return <PgAnalysis module="evidence" title="Evidence Chain" subtitle="Forensic-grade documentation — chain of custody, digital preservation, and legal compliance guidance." fields={[{key:"query",label:"Case Description",placeholder:"Describe the incident, evidence type, and what needs to be documented",area:true}]} apiRoute="/api/gemini/evidence" bodyKey="caseDescription" extraBody={{}}/>;
+    case"cases":return <PgAnalysis module="cases" title="Case Management" subtitle="Formal case analysis with investigative planning, evidence tracking, and resolution recommendations." fields={[{key:"query",label:"Case Details",placeholder:"Describe the case — subject, findings so far, open questions, timeline...",area:true}]} apiRoute="/api/cases" bodyKey="caseData" extraBody={{}}/>;
+    case"capabilities":return <PgCapabilities/>;
+    case"settings":return <PgSettings user={user} isDemo={isDemo} setPage={setPage}/>;
     case"guide":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="User Guide" subtitle="Understanding the platform."/><Card style={{padding:24}}><p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Spy by Atlas is designed and operated by intelligence professionals. Every module is built on real-world intelligence methodology.</p><p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.7,marginTop:12}}>Your data is stored with strict isolation — no information bleeds between accounts. Reports are encrypted and accessible only to you.</p></Card></div>;
     default:return <PgDash go={setPage} user={user}/>;
   }};
