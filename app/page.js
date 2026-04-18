@@ -13,7 +13,7 @@ export default function LandingPage(){
   const sendC=async()=>{if(!cf.email.trim()||!cf.message.trim())return;setCl(true);try{await fetch(`https://formspree.io/f/${FORMSPREE}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({_subject:"[Spy] Contact",name:cf.name,email:cf.email,message:cf.message,timestamp:new Date().toISOString()})});setCs(true);}catch(e){}setCl(false);};
   const inp={width:"100%",padding:"14px 16px",background:"rgba(255,255,255,0.03)",border:`1px solid ${C.border}`,borderRadius:3,color:C.text,fontSize:14,fontFamily:sans,outline:"none",fontWeight:200,boxSizing:"border-box"};
   const features=[{t:"OSINT Search",d:"Analyst-grade intelligence across social platforms, breach databases, and the open web."},{t:"War Room",d:"Direct AI-powered intelligence expert. Real-time analyst guidance for any situation."},{t:"Breach Console",d:"Cross-reference credentials against breach databases with formal impact assessments."},{t:"Social Monitoring",d:"Continuous security monitoring of your social media presence."},{t:"Threat Prediction",d:"Pattern-of-life analysis to preempt security risks before they materialize."},{t:"Executive Protection",d:"Canary tokens, data poisoning, digital decoys for high-value individuals."},{t:"Daily Briefs",d:"Personalized intelligence briefs written by analysts, not algorithms."},{t:"Document Intel",d:"Fuzzy-hash leak detection for edited, translated, or obfuscated files."}];
-  const tiers=[{id:"obs",n:"Observer",p:"Free",f:["5 OSINT searches/month","Weekly digest","Breach alerts","Threat map"]},{id:"a",n:"Analyst",p:"$49",r:true,f:["Unlimited OSINT","Daily briefs","War Room access","Social monitoring","Footprint analysis","Reports archive","Call center"]},{id:"d",n:"Director",p:"$149",f:["Everything in Analyst","Executive protection","Document intelligence","Decoy deployment","Threat prediction","Assigned analyst","Legal consultancy"]},{id:"e",n:"Enterprise",p:"Custom",f:["Everything in Director","Employee monitoring","CPIR module","Breach DB access","Dedicated team","SLA guarantee"]}];
+  const tiers=[{id:"obs",n:"Observer",p:"Free",f:["Situation map","Intel feed (limited)","Platform preview"]},{id:"a",n:"Personal Pro",p:"$49",r:true,f:["7-day free trial","Unlimited OSINT","Daily briefs","War Room","Data broker removal","Social monitoring","Travel security","Reports archive"]},{id:"d",n:"Business Premium",p:"$149",desc:"+$15/seat",f:["Everything in Personal Pro","Supply chain intel","Dark web monitoring","Deception technology","Team seats ($15/ea)","Identity verification","Fraud detection","Case management"]},{id:"e",n:"Executive",p:"Custom",f:["Everything in Business","Dedicated analyst team","Deepfake poisoning","Custom integrations","SLA guarantee"]}];
 
   return <div style={{minHeight:"100vh",background:C.bg,overflow:"hidden"}}>
     <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}*{box-sizing:border-box}
@@ -70,6 +70,15 @@ export default function LandingPage(){
     <div style={{textAlign:"center",padding:"70px 20px 36px",position:"relative",zIndex:1}}>
       <div style={{width:40,height:1,background:C.gold,margin:"0 auto 20px",opacity:.3}}/>
       <div style={{fontSize:9,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim}}>SPY BY ATLAS — DESIGNED BY INTELLIGENCE PROFESSIONALS</div>
+      <div style={{display:"flex",justifyContent:"center",gap:16,flexWrap:"wrap",marginBottom:14}}>
+        <Link href="/pricing" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Pricing</Link>
+        <Link href="/terms" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Terms</Link>
+        <Link href="/privacy" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Privacy</Link>
+        <Link href="/refund" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Refunds</Link>
+        <Link href="/cookies" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Cookies</Link>
+        <Link href="/acceptable-use" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Acceptable Use</Link>
+        <Link href="/disclaimer" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Disclaimer</Link>
+      </div>
       <div style={{fontSize:9,fontFamily:mono,letterSpacing:"1px",color:C.textDim,marginTop:6}}>2026 Atlas Design Institute. All rights reserved.</div>
     </div>
   </div>;

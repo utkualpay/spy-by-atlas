@@ -67,27 +67,34 @@ function Splash({onDone}){useEffect(()=>{const t=setTimeout(onDone,2800);return(
 return <div style={{position:"fixed",inset:0,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"splashFade 2.8s ease forwards"}}><div style={{textAlign:"center"}}><div style={{fontSize:72,fontFamily:serif,fontWeight:200,color:C.gold,animation:"splashText 2.8s ease forwards",opacity:0,textShadow:"0 0 80px rgba(196,162,101,0.12)"}}>Spy</div><div style={{fontSize:9,fontFamily:mono,letterSpacing:"3px",color:"rgba(196,162,101,0.25)",marginTop:8,animation:"splashFade 2.8s ease forwards",textTransform:"uppercase"}}>by Atlas</div></div></div>;}
 
 // ── ONBOARDING (#2) ──────────────────────────────────────────────────
-function Onboarding({onComplete}){const[step,setStep]=useState(0);
+function Onboarding({onComplete,onSetAccountType}){const[step,setStep]=useState(0);const[accountType,setAccountType]=useState(null);
 const steps=[
-  {title:"Welcome to Spy",desc:"Your private intelligence platform, designed and operated by intelligence professionals. This brief walkthrough will help you understand the core capabilities at your disposal.",icon:"🛡️"},
-  {title:"Command Center",desc:"Your daily intelligence hub. View your security posture, global threat landscape, and quick-access all modules. Your personalized daily brief will appear here.",icon:"📊"},
-  {title:"OSINT Search",desc:"Conduct analyst-grade investigations on emails, usernames, domains, companies, and individuals. Every search generates a formal intelligence report saved to your account.",icon:"🔍"},
-  {title:"The War Room",desc:"Your direct line to an AI intelligence expert. Describe any situation — cyber incident, threat assessment, operational decision — and receive real-time analyst guidance.",icon:"🔴"},
-  {title:"Social Media Monitoring",desc:"Register your social accounts for continuous security monitoring. Our team analyzes your digital presence and identifies vulnerabilities.",icon:"📱"},
-  {title:"Reports Center",desc:"Every analysis, scan, and assessment is saved as a formal intelligence report. Access your complete intelligence archive at any time.",icon:"📋"},
-  {title:"Your Profile",desc:"Share your industry, role, and concerns to receive personalized intelligence. Everything you share is treated with absolute discretion.",icon:"🔒"},
+  {title:"Welcome to Spy",desc:"Your private intelligence platform, designed and operated by intelligence professionals.",icon:"🛡️",type:"info"},
+  {title:"Who is this for?",desc:"We'll configure your dashboard based on your needs.",icon:"👤",type:"account_select"},
+  {title:"Command Center",desc:"Your daily intelligence hub. Personalized briefs, global threat landscape, and quick-access to all modules.",icon:"📊",type:"info"},
+  {title:"The War Room",desc:"Direct AI intelligence analyst. Real-time guidance for any situation — cyber incidents, threat assessments, operational decisions.",icon:"🔴",type:"info"},
+  {title:"Reports Center",desc:"Every analysis auto-saves as a formal intelligence report. Your complete classified archive.",icon:"📋",type:"info"},
+  {title:"Start Your 7-Day Trial",desc:"Full access to all intelligence modules. No limitations. Cancel anytime before the trial ends.",icon:"✦",type:"info"},
 ];
 const s=steps[step];
+const finish=()=>{if(accountType)onSetAccountType(accountType);onComplete();};
 return <div style={{animation:"fadeIn 0.4s ease"}}><Card style={{padding:40,maxWidth:560,margin:"0 auto",textAlign:"center"}}>
   <div style={{fontSize:40,marginBottom:16}}>{s.icon}</div>
   <div style={{fontSize:22,fontFamily:serif,fontWeight:300,marginBottom:12}}>{s.title}</div>
-  <p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:28}}>{s.desc}</p>
+  <p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:24}}>{s.desc}</p>
+  {s.type==="account_select"&&<div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:24,maxWidth:360,margin:"0 auto 24px"}}>
+    {[["personal","Personal","Individual intelligence and digital protection"],["family","Family","Protect your family. Monitor children's social media safety."],["business","Business","Corporate intelligence, supply chain monitoring, team seats."]].map(([k,label,desc])=>
+      <div key={k} onClick={()=>setAccountType(k)} style={{padding:"16px 20px",border:`1px solid ${accountType===k?C.gold:C.border}`,borderRadius:4,background:accountType===k?C.goldDim:"transparent",cursor:"pointer",textAlign:"left",transition:"all 0.2s"}}>
+        <div style={{fontSize:13,fontWeight:accountType===k?500:300,color:accountType===k?C.gold:C.text}}>{label}</div>
+        <div style={{fontSize:11,color:C.textDim,fontWeight:200,marginTop:2}}>{desc}</div>
+      </div>)}
+  </div>}
   <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:24}}>{steps.map((_,i)=><div key={i} style={{width:i===step?24:8,height:4,borderRadius:2,background:i===step?C.gold:C.border,transition:"all 0.3s"}}/>)}</div>
   <div style={{display:"flex",gap:12,justifyContent:"center"}}>
     {step>0&&<GoldBtn small onClick={()=>setStep(step-1)}>Back</GoldBtn>}
-    {step<steps.length-1?<GoldBtn onClick={()=>setStep(step+1)}>Next</GoldBtn>:<GoldBtn onClick={onComplete}>Enter Platform</GoldBtn>}
+    {step===1&&!accountType?<GoldBtn disabled>Select to Continue</GoldBtn>:step<steps.length-1?<GoldBtn onClick={()=>setStep(step+1)}>Next</GoldBtn>:<GoldBtn onClick={finish}>Start Trial</GoldBtn>}
   </div>
-  <button onClick={onComplete} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,marginTop:16}}>Skip walkthrough</button>
+  <button onClick={finish} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,marginTop:16}}>Skip</button>
 </Card></div>;}
 
 // ── WORLD MAP ────────────────────────────────────────────────────────
@@ -591,14 +598,208 @@ function PgCapabilities(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// NAV
+// PAYWALL (#1 — hard gate for observers)
+// ═══════════════════════════════════════════════════════════════════
+function Paywall({setPage}){return <div style={{animation:"fadeIn 0.4s ease"}}><Card style={{padding:48,maxWidth:480,margin:"40px auto",textAlign:"center"}}>
+  <div style={{fontSize:28,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:12}}>Premium Intelligence</div>
+  <p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:8}}>This module requires an active subscription.</p>
+  <p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:28}}>Start your 7-day free trial to unlock all intelligence capabilities. Full access, no limitations. Cancel anytime.</p>
+  <GoldBtn full onClick={()=>setPage("membership")}>View Plans & Start Trial</GoldBtn>
+</Card></div>;}
+
+// ═══════════════════════════════════════════════════════════════════
+// IP SCAN WIDGET (#4)
+// ═══════════════════════════════════════════════════════════════════
+function IPScanWidget(){
+  const[data,setData]=useState(null);const[loading,setLoading]=useState(false);
+  const scan=async()=>{setLoading(true);try{
+    const ipR=await fetch("https://api.ipify.org?format=json");const{ip}=await ipR.json();
+    const r=await fetch("/api/ip-scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ip})});
+    setData(await r.json());}catch(e){setData({error:"Scan failed"});}setLoading(false);};
+  useEffect(()=>{scan();},[]);
+  if(loading)return <Card style={{padding:16}}><div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase"}}>SCANNING CONNECTION...</div></Card>;
+  if(!data||data.error)return <Card style={{padding:16}}><div style={{fontSize:10,fontFamily:mono,color:C.textDim}}>Connection scan unavailable</div></Card>;
+  const isSafe=!data.isProxy&&data.threatAssessment?.includes("SAFE");
+  return <Card style={{padding:16,borderColor:isSafe?"rgba(107,158,122,0.3)":"rgba(196,92,92,0.3)"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+      <div><div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:4}}>Connection Status</div>
+        <div style={{fontSize:13,fontFamily:mono}}>{data.ip}</div>
+        <div style={{fontSize:11,color:C.textDim,fontWeight:200}}>{data.city}, {data.country} — {data.isp}</div></div>
+      <Badge severity={isSafe?"low":"high"} label={isSafe?"SECURE":"REVIEW"}/>
+    </div>
+    {data.threatAssessment&&<div style={{fontSize:11,color:C.textSec,fontWeight:200,marginTop:8,lineHeight:1.5}}>{data.threatAssessment}</div>}
+  </Card>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TRAVEL SECURITY (#8)
+// ═══════════════════════════════════════════════════════════════════
+function PgTravel(){
+  const[form,setForm]=useState({destination:"",flight:"",hotel:"",dates:"",purpose:""});const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+  const submit=async()=>{if(!form.destination.trim())return;setLoading(true);setResult(null);
+    try{const r=await fetch("/api/gemini/travel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(form)});setResult(await r.json());}catch(e){}setLoading(false);};
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Travel Security" subtitle="Pre-travel intelligence briefings. Cross-references kinetic threats, cyber risks, and geopolitical data."/>
+    <Card style={{padding:24,maxWidth:600,marginBottom:16}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Inp label="Destination *" placeholder="City, Country" value={form.destination} onChange={e=>setForm({...form,destination:e.target.value})}/>
+        <Inp label="Flight Details" placeholder="Airline, flight number, date" value={form.flight} onChange={e=>setForm({...form,flight:e.target.value})}/>
+        <Inp label="Hotel" placeholder="Hotel name and address" value={form.hotel} onChange={e=>setForm({...form,hotel:e.target.value})}/>
+        <Inp label="Travel Dates" placeholder="e.g. 15 May — 22 May 2026" value={form.dates} onChange={e=>setForm({...form,dates:e.target.value})}/>
+        <Inp label="Purpose" placeholder="Business / Personal / Diplomatic" value={form.purpose} onChange={e=>setForm({...form,purpose:e.target.value})}/>
+        <GoldBtn full onClick={submit} disabled={loading}>{loading?"Generating Dossier...":"Generate Travel Brief"}</GoldBtn>
+      </div></Card>
+    {loading&&<Loader text="Compiling travel security dossier — 30-60 seconds"/>}
+    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>PRE-TRAVEL SECURITY DOSSIER</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUPPLY CHAIN (#7)
+// ═══════════════════════════════════════════════════════════════════
+function PgSupplyChain(){
+  const[domain,setDomain]=useState("");const[name,setName]=useState("");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+  const scan=async()=>{if(!domain.trim())return;setLoading(true);setResult(null);
+    try{const r=await fetch("/api/gemini/supply-chain",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({vendorDomain:domain,vendorName:name})});setResult(await r.json());}catch(e){}setLoading(false);};
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Supply Chain Intel" subtitle="Third-party threat mapping. Scan vendor domains for exposed ports, vulnerabilities, and dark web activity."/>
+    <Card style={{padding:24,maxWidth:600,marginBottom:16}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Inp label="Vendor Domain *" placeholder="vendor-company.com" value={domain} onChange={e=>setDomain(e.target.value)} mono/>
+        <Inp label="Vendor Name" placeholder="Vendor Company Inc." value={name} onChange={e=>setName(e.target.value)}/>
+        <GoldBtn full onClick={scan} disabled={loading}>{loading?"Scanning...":"Scan Vendor"}</GoldBtn>
+      </div></Card>
+    {loading&&<Loader text="Conducting vendor risk assessment"/>}
+    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>VENDOR RISK ASSESSMENT</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FAMILY MODULE (#5)
+// ═══════════════════════════════════════════════════════════════════
+function PgFamily(){
+  const[childName,setChildName]=useState("");const[handles,setHandles]=useState([{platform:"instagram",handle:""}]);const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+  const addHandle=()=>setHandles([...handles,{platform:"instagram",handle:""}]);
+  const assess=async()=>{if(!childName.trim())return;setLoading(true);setResult(null);
+    try{const r=await fetch("/api/gemini/family",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({childName,handles:handles.filter(h=>h.handle.trim())})});setResult(await r.json());}catch(e){}setLoading(false);};
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Family Protection" subtitle="Child safety monitoring. NLP sentiment analysis detects cyberbullying, predatory language, and toxic interactions."/>
+    <Card style={{padding:24,maxWidth:600,marginBottom:16}}>
+      <Inp label="Child's Name" placeholder="First name" value={childName} onChange={e=>setChildName(e.target.value)}/>
+      <div style={{marginTop:16,fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>Social Accounts</div>
+      {handles.map((h,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:4}}>{["instagram","twitter","tiktok"].map(p=><button key={p} onClick={()=>{const n=[...handles];n[i].platform=p;setHandles(n);}} style={{padding:"4px 10px",border:`1px solid ${h.platform===p?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",background:h.platform===p?C.goldDim:"transparent",color:h.platform===p?C.gold:C.textDim,textTransform:"capitalize"}}>{p}</button>)}</div>
+        <div style={{flex:1,minWidth:150}}><Inp placeholder="@username" value={h.handle} onChange={e=>{const n=[...handles];n[i].handle=e.target.value;setHandles(n);}}/></div>
+      </div>)}
+      <button onClick={addHandle} style={{background:"none",border:"none",color:C.gold,fontSize:11,cursor:"pointer",fontFamily:mono,marginBottom:16}}>+ Add Another Account</button>
+      <GoldBtn full onClick={assess} disabled={loading}>{loading?"Analyzing...":"Run Safety Assessment"}</GoldBtn>
+      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:10}}>We analyze public-facing content only. No private messages are accessed or stored. Parents receive alert levels, not message contents.</p>
+    </Card>
+    {loading&&<Loader text="Conducting child safety assessment"/>}
+    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>CHILD SAFETY ASSESSMENT</div><div style={{fontSize:10,fontFamily:mono,color:C.critical,marginBottom:16}}>CLASSIFICATION: RESTRICTED — PARENT ACCESS ONLY</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAKE ME INVISIBLE (#6)
+// ═══════════════════════════════════════════════════════════════════
+function PgInvisible(){
+  const[name,setName]=useState("");const[email,setEmail]=useState("");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+  const go=async()=>{if(!name.trim())return;setLoading(true);setResult(null);
+    try{const r=await fetch("/api/gemini/suppression",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,action:"mass_optout"})});setResult(await r.json());}catch(e){}setLoading(false);};
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Data Suppression" subtitle="Remove your presence from data brokers, people search engines, and public databases."/>
+    <Card style={{padding:32,maxWidth:560,textAlign:"center",marginBottom:24}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:16}}>Absolute Suppression</div>
+      <Inp label="Full Legal Name" placeholder="John Michael Smith" value={name} onChange={e=>setName(e.target.value)}/>
+      <div style={{marginTop:12}}><Inp label="Primary Email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} mono/></div>
+      <div style={{marginTop:24}}>
+        <button onClick={go} disabled={loading} style={{width:"100%",padding:"20px 32px",border:`2px solid ${C.gold}`,borderRadius:4,background:C.goldDim,color:C.gold,fontSize:14,fontFamily:serif,fontWeight:400,letterSpacing:"1px",cursor:loading?"default":"pointer",transition:"all 0.3s",opacity:loading?.5:1}}>{loading?"Processing suppression...":"MAKE ME INVISIBLE"}</button>
+      </div>
+      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:14,lineHeight:1.5}}>Generates automated opt-out requests for 15+ data brokers including Whitepages, Spokeo, Experian, BeenVerified, Radaris, and more. Includes GDPR and CCPA deletion request templates.</p>
+    </Card>
+    {loading&&<Loader text="Generating suppression requests across 15+ brokers"/>}
+    {result?.guide&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>SUPPRESSION PLAYBOOK</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:6}}>Brokers targeted: {result.brokers?.length || 15}</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.guide}</div></Card>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HONEYTOKENS / DECEPTION (#12)
+// ═══════════════════════════════════════════════════════════════════
+function PgHoneytokens(){
+  const[tab,setTab]=useState("generate");const[docName,setDocName]=useState("");const[recipients,setRecipients]=useState("");const[tokenType,setTokenType]=useState("document");
+  const[tokens,setTokens]=useState([]);const[allTokens,setAllTokens]=useState([]);const[loading,setLoading]=useState(false);
+  const generate=async()=>{if(!docName.trim()||!recipients.trim())return;setLoading(true);
+    const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"generate",documentName:docName,recipients:recipients.split("\n").filter(r=>r.trim()),tokenType})});
+    const d=await r.json();setTokens(d.tokens||[]);setLoading(false);};
+  const loadAll=async()=>{const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"list"})});setAllTokens(await r.json());};
+  useEffect(()=>{loadAll();},[]);
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Deception Technology" subtitle="Generate honey-tokens — trackable fake documents and credentials. If leaked, trace the exact source instantly."/>
+    <TabBar tabs={[["generate","Generate Tokens"],["monitor","Monitor Tokens"]]} active={tab} onChange={setTab}/>
+    {tab==="generate"&&<Card style={{padding:24,maxWidth:600}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Inp label="Document / Asset Name" placeholder="Q4 Strategy Report, API Key, Client List" value={docName} onChange={e=>setDocName(e.target.value)}/>
+        <div><div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:6}}>Token Type</div>
+          <div style={{display:"flex",gap:6}}>{["document","credential","url","canary"].map(t=><button key={t} onClick={()=>setTokenType(t)} style={{padding:"5px 12px",border:`1px solid ${tokenType===t?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",background:tokenType===t?C.goldDim:"transparent",color:tokenType===t?C.gold:C.textDim,textTransform:"capitalize"}}>{t}</button>)}</div></div>
+        <Inp label="Recipients (one per line)" placeholder={"John Smith — Board Member\nJane Doe — CFO\nVendor Corp — Subcontractor"} value={recipients} onChange={e=>setRecipients(e.target.value)} area/>
+        <GoldBtn full onClick={generate} disabled={loading}>{loading?"Generating...":"Generate Honey-Tokens"}</GoldBtn>
+      </div>
+      {tokens.length>0&&<div style={{marginTop:20}}><div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:10}}>Generated Tokens</div>
+        {tokens.map((t,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
+          <span style={{fontSize:12}}>{t.recipient}</span>
+          <span style={{fontFamily:mono,fontSize:10,color:C.gold,padding:"4px 10px",background:C.goldDim,borderRadius:3}}>{t.token_id}</span>
+        </div>)}
+        <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:10}}>Embed each token into the recipient's copy. If the document surfaces on dark web or unauthorized channels, the token identifies the leak source.</p>
+      </div>}
+    </Card>}
+    {tab==="monitor"&&<Card style={{padding:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase"}}>Active Tokens ({allTokens.length})</span><GoldBtn small onClick={loadAll}>Refresh</GoldBtn></div>
+      {allTokens.length===0&&<div style={{fontSize:12,color:C.textDim,fontWeight:200}}>No tokens generated yet.</div>}
+      {allTokens.map((t,i)=><div key={t.id||i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
+        <div><div style={{fontSize:12}}>{t.document_name} → {t.recipient}</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim}}>{t.token_id} — {t.token_type}</div></div>
+        <Badge severity={t.triggered?"critical":"low"} label={t.triggered?"TRIGGERED":"CLEAN"}/>
+      </div>)}
+    </Card>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SEAT MANAGEMENT (#3)
+// ═══════════════════════════════════════════════════════════════════
+function PgSeats(){
+  const[seats,setSeats]=useState([]);const[newEmail,setNewEmail]=useState("");const[newRole,setNewRole]=useState("member");const[loading,setLoading]=useState(false);
+  const load=async()=>{const r=await fetch("/api/seats");setSeats(await r.json());};
+  useEffect(()=>{load();},[]);
+  const invite=async()=>{if(!newEmail.trim())return;setLoading(true);
+    await fetch("/api/seats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"invite",email:newEmail,role:newRole})});
+    setNewEmail("");load();setLoading(false);};
+  const remove=async(email)=>{await fetch("/api/seats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"remove",email})});load();};
+  const activeSeats=seats.filter(s=>s.status!=="removed");
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Team Seats" subtitle="Manage sub-users for your organization. $15 per additional seat/month."/>
+    <Card style={{padding:24,marginBottom:16}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:12}}>Invite Team Member</div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
+        {["member","admin"].map(r=><button key={r} onClick={()=>setNewRole(r)} style={{padding:"5px 12px",border:`1px solid ${newRole===r?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",background:newRole===r?C.goldDim:"transparent",color:newRole===r?C.gold:C.textDim,textTransform:"capitalize"}}>{r}</button>)}
+      </div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><div style={{flex:1,minWidth:200}}><Inp placeholder="employee@company.com" value={newEmail} onChange={e=>setNewEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&invite()}/></div><GoldBtn small onClick={invite} disabled={loading}>Invite</GoldBtn></div>
+      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:8}}>Each additional seat is $15/month, billed to the Master Account. New members receive an invitation email.</p>
+    </Card>
+    <Card style={{padding:20}}>
+      <div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:12}}>Team Members ({activeSeats.length})</div>
+      {activeSeats.map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
+        <div><div style={{fontSize:12}}>{s.email}</div><div style={{fontSize:10,color:C.textDim,fontFamily:mono}}>{s.role} — {s.status}</div></div>
+        <div style={{display:"flex",gap:6}}><Badge severity={s.status==="active"?"low":"info"} label={s.status}/><GoldBtn small danger onClick={()=>remove(s.email)}>Remove</GoldBtn></div>
+      </div>)}
+    </Card>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NAV (updated with all new modules)
 // ═══════════════════════════════════════════════════════════════════
 const NAV=[
-  {group:"Operations",items:[{id:"dash",label:"Command Center"},{id:"brief",label:"Daily Brief"},{id:"warroom",label:"War Room"},{id:"intel",label:"Intelligence Feed"},{id:"map",label:"Situation Map"}]},
+  {group:"Operations",items:[{id:"dash",label:"Command Center"},{id:"brief",label:"Daily Brief"},{id:"warroom",label:"War Room"},{id:"intel",label:"Intelligence Feed"},{id:"map",label:"Situation Map"},{id:"travel",label:"Travel Security"}]},
   {group:"Investigation",items:[{id:"osint",label:"OSINT Search"},{id:"linkmap",label:"Link Analysis"},{id:"identity",label:"Identity Verification"},{id:"fraud",label:"Fraud Detection"},{id:"breaches",label:"Breach Console"},{id:"darkweb",label:"Dark Web Intel"}]},
-  {group:"Monitoring",items:[{id:"footprint",label:"Digital Footprint"},{id:"social",label:"Social Monitoring"},{id:"imagescan",label:"Image Security"},{id:"geospatial",label:"Geospatial Intel"}]},
-  {group:"Protection",items:[{id:"docintel",label:"Document Intel"},{id:"suppress",label:"Data Suppression"},{id:"decoy",label:"Decoy Deployment"},{id:"execprot",label:"Executive Protection"},{id:"evidence",label:"Evidence Chain"}]},
+  {group:"Monitoring",items:[{id:"footprint",label:"Digital Footprint"},{id:"social",label:"Social Monitoring"},{id:"imagescan",label:"Image Security"},{id:"geospatial",label:"Geospatial Intel"},{id:"ipscan",label:"Connection Security"},{id:"supplychain",label:"Supply Chain"}]},
+  {group:"Protection",items:[{id:"invisible",label:"Make Me Invisible"},{id:"docintel",label:"Document Intel"},{id:"decoy",label:"Decoy Deployment"},{id:"honeytokens",label:"Deception Tech"},{id:"execprot",label:"Executive Protection"},{id:"evidence",label:"Evidence Chain"}]},
   {group:"Threat Analysis",items:[{id:"predict",label:"Threat Prediction"},{id:"predictive",label:"Predictive Forecast"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"},{id:"cases",label:"Case Management"}]},
+  {group:"Family & Team",items:[{id:"family",label:"Family Protection"},{id:"seats",label:"Team Seats"}]},
   {group:"Services",items:[{id:"reports",label:"Reports Center"},{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
   {group:"System",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"}]},
 ];
@@ -622,6 +823,7 @@ function PgDash({go,user}){
         <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7}}>All systems operational. Your daily brief is ready for generation. {CONFLICTS.filter(z=>z.sev==="critical").length} critical situations require monitoring.</div>
         <div style={{marginTop:14}}><GoldBtn small onClick={()=>go("brief")}>Open Brief</GoldBtn></div></Card></div>
     <Card style={{padding:20}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}><span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>Global Situation</span><button onClick={()=>go("map")} style={{background:"none",border:"none",color:C.gold,fontSize:11,cursor:"pointer"}}>Full map</button></div><WorldMap zones={CONFLICTS} sel={null} onSelect={()=>go("map")}/></Card>
+    <div style={{marginTop:16}}><IPScanWidget/></div>
   </div>;
 }
 
@@ -630,14 +832,24 @@ function PgDash({go,user}){
 // ═══════════════════════════════════════════════════════════════════
 export default function SpyDashboard({user,isDemo}){
   const[page,setPage]=useState("dash");const[collapsed,setCollapsed]=useState(false);const[mobileNav,setMobileNav]=useState(false);
-  const[showSplash,setShowSplash]=useState(true);const[showOnboarding,setShowOnboarding]=useState(!isDemo);
+  const[showSplash,setShowSplash]=useState(true);const[showOnboarding,setShowOnboarding]=useState(!isDemo&&!user?.onboarded);
+  const[accountType,setAccountType]=useState(user?.account_type||null);
   const router=useRouter();
+  const tier=user?.tier||"observer";
+  const subActive=isDemo||user?.subscription_status==="active"||user?.subscription_status==="trial";
 
   const handleSignOut=async()=>{if(isDemo){router.push("/");return;}const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.auth.signOut();router.push("/");router.refresh();};
   const navClick=(id)=>{setPage(id);setMobileNav(false);};
+  const setAccountTypeFn=async(t)=>{setAccountType(t);if(!isDemo){try{const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.from("profiles").update({account_type:t,onboarded:true}).eq("id",user?.id);}catch(e){}}};
+
+  // Access control: check if current tier can access page
+  const premiumPages=["brief","warroom","osint","linkmap","identity","fraud","breaches","darkweb","footprint","social","imagescan","geospatial","docintel","suppress","decoy","execprot","evidence","predict","predictive","insider","cpir","cases","reports","travel","supplychain","family","honeytokens","invisible","ipscan","seats"];
+  const observerAllowed=["dash","intel","map","membership","consult","capabilities","settings","guide"];
+  const needsSub=(p)=>premiumPages.includes(p)&&tier==="observer"&&!isDemo;
 
   const rp=()=>{
-    if(showOnboarding&&!isDemo)return <Onboarding onComplete={()=>setShowOnboarding(false)}/>;
+    if(showOnboarding&&!isDemo)return <Onboarding onComplete={()=>setShowOnboarding(false)} onSetAccountType={setAccountTypeFn}/>;
+    if(needsSub(page))return <Paywall setPage={setPage}/>;
     switch(page){
     case"dash":return <PgDash go={setPage} user={user}/>;
     case"brief":return <PgBrief user={user}/>;
@@ -650,41 +862,56 @@ export default function SpyDashboard({user,isDemo}){
     case"imagescan":return <PgImageScan user={user}/>;
     case"decoy":return <PgDecoy/>;
     case"reports":return <PgReports/>;
-    case"footprint":return <PgAnalysis module="footprint" title="Digital Footprint" subtitle="Complete exposure analysis by our intelligence team." fields={[{key:"query",label:"Target (email, name, or username)",placeholder:"target@domain.com",mono:true},{key:"type",label:"Target Type",placeholder:"email / name / username / phone"},{key:"context",label:"Additional Context (optional)",placeholder:"Known associations, industry, concerns...",area:true}]}/>;
-    case"docintel":return <PgAnalysis module="docintel" title="Document Intelligence" subtitle="Fuzzy-hash leak detection and metadata analysis." fields={[{key:"query",label:"Document or Subject",placeholder:"Document title, hash, or description"},{key:"context",label:"Distribution Details",placeholder:"Who received this document, when, classification level...",area:true}]}/>;
-    case"suppress":return <PgAnalysis module="suppress" title="Data Suppression" subtitle="Automated takedown analysis and strategy." fields={[{key:"query",label:"Content to Suppress",placeholder:"URL, description, or search term"},{key:"context",label:"Suppression Details",placeholder:"Where it appears, severity, legal jurisdiction...",area:true}]}/>;
-    case"execprot":return <PgAnalysis module="execprot" title="Executive Protection" subtitle="Exposure assessment for high-value individuals." fields={[{key:"query",label:"Protected Individual",placeholder:"Full name"},{key:"context",label:"Context",placeholder:"Role, public profile, known threats, travel patterns...",area:true}]}/>;
-    case"predict":return <PgAnalysis module="threat" title="Threat Prediction" subtitle="Pattern-of-life analysis and threat forecasting." fields={[{key:"query",label:"Subject or Scenario",placeholder:"Describe the subject or scenario to assess"},{key:"context",label:"Pattern of Life Data",placeholder:"Routines, travel, digital habits, known associations...",area:true}]}/>;
-    case"insider":return <PgAnalysis module="threat" title="Insider Threats" subtitle="Behavioral analysis and risk assessment." fields={[{key:"query",label:"Subject or Department",placeholder:"Individual, team, or department"},{key:"context",label:"Observed Indicators",placeholder:"Behavioral changes, access patterns, grievances, external contacts...",area:true}]}/>;
-    case"cpir":return <PgAnalysis module="threat" title="CPIR Assessment" subtitle="Continuous Psychological Indicator Report." fields={[{key:"query",label:"Assessment Subject",placeholder:"Individual or group"},{key:"context",label:"Behavioral Observations",placeholder:"Recent changes, morale indicators, loyalty signals, stress factors...",area:true}]}/>;
-    case"membership":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Membership" subtitle="Intelligence as a Service — choose your level of awareness."/>
-      <div className="sg4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:28}}>
-        {[{id:"obs",n:"Observer",p:"Free",f:["5 OSINT searches/month","Weekly digest","Breach alerts","Threat map"]},
-          {id:"analyst",n:"Analyst",p:"$49",r:true,f:["Unlimited OSINT","Daily briefs","War Room access","Social monitoring","Footprint analysis","Reports archive","Call center"]},
-          {id:"director",n:"Director",p:"$149",f:["Everything in Analyst","Executive protection","Document intelligence","Decoy deployment","Threat prediction","Assigned analyst","Legal consultancy"]},
-          {id:"ent",n:"Enterprise",p:"Custom",f:["Everything in Director","Employee monitoring","CPIR module","Breach database access","Dedicated team","SLA guarantee"]},
-        ].map((p,i)=><Card key={p.id} style={{padding:22,position:"relative"}}>{p.r&&<div style={{position:"absolute",top:-1,left:16,padding:"2px 10px",background:C.gold,color:C.bg,fontSize:9,fontFamily:mono,letterSpacing:"1.5px",textTransform:"uppercase",borderRadius:"0 0 3px 3px"}}>Recommended</div>}<div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>{p.n}</div><div style={{fontSize:30,fontFamily:serif,fontWeight:300,marginBottom:16}}>{p.p}<span style={{fontSize:12,color:C.textDim}}>{p.p!=="Free"&&p.p!=="Custom"?"/mo":""}</span></div>{p.f.map((f,j)=><div key={j} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.textSec,fontWeight:200,marginBottom:5}}><span style={{color:C.gold,fontSize:9}}>✦</span>{f}</div>)}</Card>)}</div>
-      <Card style={{padding:24,maxWidth:480}}>
-        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase",marginBottom:14}}>Subscribe</div>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <GoldBtn full onClick={()=>window.open("/api/payment?tier=analyst","_blank")}>Analyst — $49/mo</GoldBtn>
-          <GoldBtn full onClick={()=>window.open("/api/payment?tier=director","_blank")}>Director — $149/mo</GoldBtn>
-          <button onClick={()=>setPage("consult")} style={{padding:"13px 24px",border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.textSec,fontSize:11,fontFamily:mono,letterSpacing:"1.5px",textTransform:"uppercase",cursor:"pointer",width:"100%"}}>Enterprise — Contact Us</button>
-        </div>
-        <div style={{fontSize:10,color:C.textDim,fontFamily:mono,textAlign:"center",marginTop:12}}>Secured by iyzico</div>
-      </Card></div>;
-    case"consult":return <PgAnalysis module="threat" title="Consultancy" subtitle="Direct access to our intelligence professionals. Describe your needs." fields={[{key:"query",label:"Subject",placeholder:"What do you need?"},{key:"context",label:"Details",placeholder:"Describe your requirements in full...",area:true}]}/>;
-    case"linkmap":return <PgAnalysis module="linkmap" title="Link Analysis" subtitle="Entity relationship mapping — trace connections between people, organizations, domains, and digital identities." fields={[{key:"query",label:"Entity to Map",placeholder:"Person name, company, domain, or email",mono:true},{key:"type",label:"Entity Type",placeholder:"person / company / domain / email / ip"},{key:"context",label:"Known Associations (optional)",placeholder:"Known connections, organizations, industries, geographic ties...",area:true}]} apiRoute="/api/gemini/linkmap" bodyKey="entity" extraBody={{entityType:"entity"}}/>;
-    case"darkweb":return <PgAnalysis module="darkweb" title="Dark Web Intelligence" subtitle="Underground monitoring — forums, credential marketplaces, ransomware groups, paste sites, encrypted channels." fields={[{key:"query",label:"Search Target",placeholder:"Email, domain, company name, or keyword",mono:true},{key:"type",label:"Target Type",placeholder:"email / domain / company / keyword"},{key:"context",label:"Additional Context",placeholder:"Known threat actors, previous incidents, specific concerns...",area:true}]} apiRoute="/api/gemini/darkweb" bodyKey="query" extraBody={{queryType:"entity"}}/>;
-    case"identity":return <PgAnalysis module="identity" title="Identity Verification" subtitle="Cross-reference identities against public records, credentials, and social presence for authenticity scoring." fields={[{key:"query",label:"Full Name",placeholder:"First Last"},{key:"context",label:"Additional Data",placeholder:"Email, company, job title, location, LinkedIn URL, known credentials...",area:true}]} apiRoute="/api/gemini/identity" bodyKey="name" extraBody={{}}/>;
-    case"fraud":return <PgAnalysis module="fraud" title="Fraud Detection" subtitle="Risk assessment covering financial fraud, identity fraud, BEC indicators, and impersonation detection." fields={[{key:"query",label:"Entity to Assess",placeholder:"Person, company, domain, or email",mono:true},{key:"type",label:"Entity Type",placeholder:"person / company / domain / email"},{key:"context",label:"Suspicious Indicators",placeholder:"Describe what prompted this assessment — unusual transactions, impersonation, anomalies...",area:true}]} apiRoute="/api/gemini/fraud" bodyKey="entity" extraBody={{entityType:"entity"}}/>;
-    case"geospatial":return <PgAnalysis module="geospatial" title="Geospatial Intelligence" subtitle="Location-based threat assessment — physical security, infrastructure, civil unrest, and safe haven identification." fields={[{key:"query",label:"Location",placeholder:"City, address, or coordinates"},{key:"context",label:"Context",placeholder:"Purpose of visit, duration, assets at location, specific security concerns...",area:true}]} apiRoute="/api/gemini/geospatial" bodyKey="location" extraBody={{}}/>;
-    case"predictive":return <PgAnalysis module="predictive" title="Predictive Threat Forecast" subtitle="30/60/90-day threat horizon analysis with confidence levels and preemptive recommendations." fields={[{key:"query",label:"Sector / Industry",placeholder:"e.g. Financial Services, Technology, Energy"},{key:"context",label:"Assets & Interests",placeholder:"Specific assets, technologies, geographic exposure, supply chain dependencies...",area:true}]} apiRoute="/api/gemini/predict" bodyKey="sector" extraBody={{}}/>;
-    case"evidence":return <PgAnalysis module="evidence" title="Evidence Chain" subtitle="Forensic-grade documentation — chain of custody, digital preservation, and legal compliance guidance." fields={[{key:"query",label:"Case Description",placeholder:"Describe the incident, evidence type, and what needs to be documented",area:true}]} apiRoute="/api/gemini/evidence" bodyKey="caseDescription" extraBody={{}}/>;
-    case"cases":return <PgAnalysis module="cases" title="Case Management" subtitle="Formal case analysis with investigative planning, evidence tracking, and resolution recommendations." fields={[{key:"query",label:"Case Details",placeholder:"Describe the case — subject, findings so far, open questions, timeline...",area:true}]} apiRoute="/api/cases" bodyKey="caseData" extraBody={{}}/>;
+    case"travel":return <PgTravel/>;
+    case"supplychain":return <PgSupplyChain/>;
+    case"family":return <PgFamily/>;
+    case"invisible":return <PgInvisible/>;
+    case"honeytokens":return <PgHoneytokens/>;
+    case"seats":return <PgSeats/>;
+    case"ipscan":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Connection Security" subtitle="Real-time analysis of your current network connection."/><IPScanWidget/></div>;
+    case"footprint":return <PgAnalysis module="footprint" title="Digital Footprint" subtitle="Complete exposure analysis." fields={[{key:"query",label:"Target",placeholder:"target@domain.com",mono:true},{key:"type",label:"Type",placeholder:"email / name / username / phone"},{key:"context",label:"Context",placeholder:"Known associations, concerns...",area:true}]}/>;
+    case"docintel":return <PgAnalysis module="docintel" title="Document Intelligence" subtitle="Fuzzy-hash leak detection." fields={[{key:"query",label:"Document",placeholder:"Title, hash, or description"},{key:"context",label:"Distribution",placeholder:"Recipients, classification...",area:true}]}/>;
+    case"execprot":return <PgAnalysis module="execprot" title="Executive Protection" subtitle="Exposure assessment." fields={[{key:"query",label:"Individual",placeholder:"Full name"},{key:"context",label:"Context",placeholder:"Role, threats, travel...",area:true}]}/>;
+    case"predict":return <PgAnalysis module="threat" title="Threat Prediction" subtitle="Pattern-of-life analysis." fields={[{key:"query",label:"Subject",placeholder:"Describe scenario"},{key:"context",label:"Pattern of Life",placeholder:"Routines, habits...",area:true}]}/>;
+    case"insider":return <PgAnalysis module="threat" title="Insider Threats" subtitle="Behavioral risk assessment." fields={[{key:"query",label:"Subject",placeholder:"Individual or department"},{key:"context",label:"Indicators",placeholder:"Changes, access patterns...",area:true}]}/>;
+    case"cpir":return <PgAnalysis module="threat" title="CPIR Assessment" subtitle="Psychological Indicator Report." fields={[{key:"query",label:"Subject",placeholder:"Individual or group"},{key:"context",label:"Observations",placeholder:"Morale, loyalty, stress...",area:true}]}/>;
+    case"linkmap":return <PgAnalysis module="linkmap" title="Link Analysis" subtitle="Entity relationship mapping." fields={[{key:"query",label:"Entity",placeholder:"Name, company, domain",mono:true},{key:"type",label:"Type",placeholder:"person / company / domain"},{key:"context",label:"Known Links",placeholder:"Associations, ties...",area:true}]} apiRoute="/api/gemini/linkmap" bodyKey="entity"/>;
+    case"darkweb":return <PgAnalysis module="darkweb" title="Dark Web Intelligence" subtitle="Underground monitoring." fields={[{key:"query",label:"Target",placeholder:"Email, domain, company",mono:true},{key:"type",label:"Type",placeholder:"email / domain / company"},{key:"context",label:"Context",placeholder:"Threat actors, incidents...",area:true}]} apiRoute="/api/gemini/darkweb" bodyKey="query"/>;
+    case"identity":return <PgAnalysis module="identity" title="Identity Verification" subtitle="Authenticity scoring." fields={[{key:"query",label:"Full Name",placeholder:"First Last"},{key:"context",label:"Data",placeholder:"Email, company, credentials...",area:true}]} apiRoute="/api/gemini/identity" bodyKey="name"/>;
+    case"fraud":return <PgAnalysis module="fraud" title="Fraud Detection" subtitle="Risk assessment." fields={[{key:"query",label:"Entity",placeholder:"Person, company, email",mono:true},{key:"type",label:"Type",placeholder:"person / company / domain"},{key:"context",label:"Indicators",placeholder:"Suspicious activity...",area:true}]} apiRoute="/api/gemini/fraud" bodyKey="entity"/>;
+    case"geospatial":return <PgAnalysis module="geospatial" title="Geospatial Intelligence" subtitle="Location threat assessment." fields={[{key:"query",label:"Location",placeholder:"City, address, coordinates"},{key:"context",label:"Context",placeholder:"Purpose, duration, concerns...",area:true}]} apiRoute="/api/gemini/geospatial" bodyKey="location"/>;
+    case"predictive":return <PgAnalysis module="predictive" title="Predictive Forecast" subtitle="30/60/90-day threat horizon." fields={[{key:"query",label:"Sector",placeholder:"e.g. Finance, Technology"},{key:"context",label:"Assets",placeholder:"Specific assets, exposure...",area:true}]} apiRoute="/api/gemini/predict" bodyKey="sector"/>;
+    case"evidence":return <PgAnalysis module="evidence" title="Evidence Chain" subtitle="Forensic documentation." fields={[{key:"query",label:"Case",placeholder:"Describe the incident",area:true}]} apiRoute="/api/gemini/evidence" bodyKey="caseDescription"/>;
+    case"cases":return <PgAnalysis module="cases" title="Case Management" subtitle="Investigative analysis." fields={[{key:"query",label:"Case Details",placeholder:"Subject, findings, timeline...",area:true}]} apiRoute="/api/cases" bodyKey="caseData"/>;
+    case"suppress":return <PgInvisible/>;
     case"capabilities":return <PgCapabilities/>;
+    case"membership":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Membership" subtitle="Start your 7-day free trial. Full access. Cancel anytime."/>
+      <div style={{background:C.goldDim,border:`1px solid ${C.gold}30`,borderRadius:4,padding:"14px 20px",marginBottom:24,fontSize:13,color:C.gold,fontWeight:300,textAlign:"center"}}>7-Day Free Trial — Full access to all modules. No limitations. Card required.</div>
+      <div className="sg4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:28}}>
+        {[{id:"obs",n:"Observer",p:"Free",desc:"Limited teaser",f:["Situation map","Intel feed (limited)","Platform preview"]},
+          {id:"personal_pro",n:"Personal Pro",p:"$49",r:true,desc:"Standard intelligence",f:["Unlimited OSINT","Daily briefs","War Room","Social monitoring","Data broker removal","Footprint analysis","Breach monitoring","Reports archive","Travel security"]},
+          {id:"business",n:"Business Premium",p:"$149",desc:"+$15/seat",f:["Everything in Personal Pro","Supply chain intel","Dark web monitoring","Deception technology","Corporate exposure alerts","Team seats ($15/ea)","Identity verification","Fraud detection","Case management"]},
+          {id:"executive",n:"Executive",p:"Custom",desc:"White glove",f:["Everything in Business","Dedicated analyst team","Active deepfake poisoning","Custom integrations","SLA guarantee","Priority response"]},
+        ].map((p,i)=><Card key={p.id} style={{padding:22,position:"relative"}}>{p.r&&<div style={{position:"absolute",top:-1,left:16,padding:"2px 10px",background:C.gold,color:C.bg,fontSize:9,fontFamily:mono,letterSpacing:"1.5px",textTransform:"uppercase",borderRadius:"0 0 3px 3px"}}>Popular</div>}<div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{p.n}</div><div style={{fontSize:28,fontFamily:serif,fontWeight:300,marginBottom:4}}>{p.p}<span style={{fontSize:11,color:C.textDim}}>{p.p!=="Free"&&p.p!=="Custom"?"/mo":""}</span></div><div style={{fontSize:10,color:C.textDim,fontFamily:mono,marginBottom:14}}>{p.desc}</div>{p.f.map((f,j)=><div key={j} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.textSec,fontWeight:200,marginBottom:4}}><span style={{color:C.gold,fontSize:9}}>✦</span>{f}</div>)}</Card>)}</div>
+      <Card style={{padding:24,maxWidth:480}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase",marginBottom:14}}>Start 7-Day Free Trial</div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <GoldBtn full onClick={()=>window.open("/api/paddle?tier=personal_pro","_blank")}>Personal Pro — $49/mo</GoldBtn>
+          <GoldBtn full onClick={()=>window.open("/api/paddle?tier=business","_blank")}>Business Premium — $149/mo</GoldBtn>
+          <button onClick={()=>setPage("consult")} style={{padding:"13px 24px",border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.textSec,fontSize:11,fontFamily:mono,letterSpacing:"1.5px",textTransform:"uppercase",cursor:"pointer",width:"100%"}}>Executive — Request Demo</button>
+        </div>
+        <div style={{fontSize:10,color:C.textDim,fontFamily:mono,textAlign:"center",marginTop:12}}>Powered by Paddle — Tax compliant globally</div>
+      </Card></div>;
+    case"consult":return <PgAnalysis module="threat" title="Consultancy" subtitle="Describe your needs." fields={[{key:"query",label:"Subject",placeholder:"What do you need?"},{key:"context",label:"Details",placeholder:"Full requirements...",area:true}]}/>;
     case"settings":return <PgSettings user={user} isDemo={isDemo} setPage={setPage}/>;
-    case"guide":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="User Guide" subtitle="Understanding the platform."/><Card style={{padding:24}}><p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Spy by Atlas is designed and operated by intelligence professionals. Every module is built on real-world intelligence methodology.</p><p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.7,marginTop:12}}>Your data is stored with strict isolation — no information bleeds between accounts. Reports are encrypted and accessible only to you.</p></Card></div>;
+    case"guide":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="User Guide" subtitle="Platform architecture."/>
+      <Card style={{padding:24}}><p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Spy by Atlas is designed and operated by intelligence professionals. Every module runs on real-world methodology.</p>
+      <div style={{marginTop:16,fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.7}}>
+        <div style={{fontFamily:mono,fontSize:10,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:8}}>Data Architecture</div>
+        <p>Your data is stored in an isolated PostgreSQL database with Row-Level Security. No data bleeds between accounts. Reports are encrypted and accessible only to you. All AI analysis runs server-side — your queries never leave our infrastructure unprotected.</p>
+        <div style={{fontFamily:mono,fontSize:10,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginTop:16,marginBottom:8}}>Multi-Tenancy</div>
+        <p>Each user operates in a fully isolated environment. Master accounts control sub-user access. Business seats inherit organizational permissions without accessing other users' data.</p>
+      </div></Card></div>;
     default:return <PgDash go={setPage} user={user}/>;
   }};
 

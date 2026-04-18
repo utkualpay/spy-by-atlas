@@ -20,6 +20,13 @@ export default async function AppPage() {
     email: user.email,
     name: profile?.full_name || user.user_metadata?.full_name || "Operator",
     tier: profile?.tier || "observer",
+    account_type: profile?.account_type || null,
+    subscription_status: profile?.subscription_status || "inactive",
+    onboarded: profile?.onboarded || false,
+    industry: profile?.industry,
+    role: profile?.role,
+    interests: profile?.interests,
+    concerns: profile?.concerns,
   };
 
   return <SpyDashboard user={userData} isDemo={false} />;
