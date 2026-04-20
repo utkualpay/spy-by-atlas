@@ -50,6 +50,8 @@ export default function PricingPage(){
       <div style={{display:"flex",justifyContent:"center",gap:20,flexWrap:"wrap",marginBottom:16}}>
         <Link href="/terms" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>Terms</Link>
         <Link href="/privacy" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>Privacy</Link>
+        <Link href="/eula" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>EULA</Link>
+        <Link href="/explicit-content" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>Conduct</Link>
         <Link href="/refund" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>Refunds</Link>
         <Link href="/cookies" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>Cookies</Link>
         <Link href="/acceptable-use" style={{fontSize:10,color:C.textDim,fontFamily:mono}}>Acceptable Use</Link>

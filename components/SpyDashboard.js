@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { t as T, LANGS, getLang, setLang } from "@/lib/i18n";
 
 // ── THEME ────────────────────────────────────────────────────────────
 const C={bg:"#09090b",bgCard:"#131316",bgHover:"#1a1a1f",bgSidebar:"#0c0c0f",bgInput:"#18181c",border:"#1f1f25",borderHover:"#2a2a32",text:"#e4e0d9",textSec:"#9d9890",textDim:"#5c5854",gold:"#c4a265",goldDim:"rgba(196,162,101,0.10)",goldMid:"rgba(196,162,101,0.20)",critical:"#c45c5c",criticalDim:"rgba(196,92,92,0.10)",high:"#c49a5c",highDim:"rgba(196,154,92,0.10)",medium:"#7c8db5",mediumDim:"rgba(124,141,181,0.10)",low:"#6b9e7a",lowDim:"rgba(107,158,122,0.10)",info:"#8b8db5",infoDim:"rgba(139,141,181,0.10)",warRed:"#8b1a1a",warRedDim:"rgba(139,26,26,0.12)",warRedBorder:"rgba(139,26,26,0.35)"};
@@ -728,7 +729,7 @@ function PgHoneytokens(){
   const generate=async()=>{if(!docName.trim()||!recipients.trim())return;setLoading(true);
     const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"generate",documentName:docName,recipients:recipients.split("\n").filter(r=>r.trim()),tokenType})});
     const d=await r.json();setTokens(d.tokens||[]);setLoading(false);};
-  const loadAll=async()=>{const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"list"})});setAllTokens(await r.json());};
+  const loadAll=async()=>{try{const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"list"})});const d=await r.json();setAllTokens(Array.isArray(d)?d:[]);}catch(e){setAllTokens([]);}};
   useEffect(()=>{loadAll();},[]);
   return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Deception Technology" subtitle="Generate honey-tokens — trackable fake documents and credentials. If leaked, trace the exact source instantly."/>
     <TabBar tabs={[["generate","Generate Tokens"],["monitor","Monitor Tokens"]]} active={tab} onChange={setTab}/>
@@ -791,8 +792,201 @@ function PgSeats(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// NAV (updated with all new modules)
+// TRIAL CARD GATE (#9 — block usage until card entered)
 // ═══════════════════════════════════════════════════════════════════
+function TrialGate({setPage,user}){return <div style={{animation:"fadeIn 0.4s ease"}}><Card style={{padding:48,maxWidth:520,margin:"40px auto",textAlign:"center",borderColor:C.gold+"40"}}>
+  <div style={{fontSize:12,fontFamily:mono,letterSpacing:"3px",color:C.gold,textTransform:"uppercase",marginBottom:16}}>One Step Remains</div>
+  <div style={{fontSize:28,fontFamily:serif,fontWeight:300,marginBottom:12}}>Unlock Your Access</div>
+  <p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:10}}>Your 7-day trial begins the moment you add a payment method. Full access to every module — no limits, no restrictions.</p>
+  <p style={{fontSize:12,color:C.textDim,fontWeight:200,marginBottom:28}}>Cancel before day 7 and you are not charged.</p>
+  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <GoldBtn full onClick={()=>window.open("/api/paddle?tier=personal_pro","_blank")}>Start Trial — Personal Pro ($49/mo)</GoldBtn>
+    <GoldBtn full onClick={()=>window.open("/api/paddle?tier=business","_blank")}>Start Trial — Business ($149/mo)</GoldBtn>
+  </div>
+  <div style={{marginTop:20,fontSize:10,fontFamily:mono,color:C.textDim,letterSpacing:"1px"}}>SECURED BY PADDLE — GLOBAL TAX COMPLIANT</div>
+</Card></div>;}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRODUCT TOUR OVERLAY (#10 — guided first experience)
+// ═══════════════════════════════════════════════════════════════════
+function ProductTour({steps,onComplete,onSkip}){
+  const[idx,setIdx]=useState(0);const s=steps[idx];if(!s)return null;
+  return <div style={{position:"fixed",inset:0,zIndex:9000,pointerEvents:"none"}}>
+    <div style={{position:"absolute",inset:0,background:"rgba(9,9,11,0.78)",backdropFilter:"blur(2px)",animation:"fadeIn 0.3s ease",pointerEvents:"auto"}}/>
+    <div style={{position:"absolute",bottom:40,left:"50%",transform:"translateX(-50%)",width:"90%",maxWidth:440,background:C.bgCard,border:`1px solid ${C.gold}`,borderRadius:6,padding:24,pointerEvents:"auto",animation:"fadeIn 0.4s ease",boxShadow:"0 20px 60px rgba(0,0,0,0.6)"}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Step {idx+1} of {steps.length}</div>
+      <div style={{fontSize:18,fontFamily:serif,fontWeight:400,marginBottom:10}}>{s.title}</div>
+      <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:20}}>{s.desc}</p>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        <button onClick={onSkip} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,letterSpacing:"1px"}}>Skip tour</button>
+        <div style={{display:"flex",gap:8}}>
+          {idx>0&&<GoldBtn small onClick={()=>setIdx(idx-1)}>Back</GoldBtn>}
+          {idx<steps.length-1?<GoldBtn small onClick={()=>{if(s.action)s.action();setIdx(idx+1);}}>Next →</GoldBtn>:<GoldBtn small onClick={onComplete}>Complete</GoldBtn>}
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NOTES (#15)
+// ═══════════════════════════════════════════════════════════════════
+function PgNotes(){
+  const[notes,setNotes]=useState([]);const[loading,setLoading]=useState(true);const[selected,setSelected]=useState(null);const[editMode,setEditMode]=useState(false);
+  const[title,setTitle]=useState("");const[content,setContent]=useState("");
+  const load=async()=>{try{const r=await fetch("/api/notes");const d=await r.json();setNotes(Array.isArray(d)?d:[]);}catch(e){setNotes([]);}setLoading(false);};
+  useEffect(()=>{load();},[]);
+
+  const create=async()=>{const r=await fetch("/api/notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",title:"New Note",content:""})});const d=await r.json();setSelected(d);setTitle("New Note");setContent("");setEditMode(true);load();};
+  const save=async()=>{if(!selected)return;await fetch("/api/notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update",id:selected.id,title,content})});setEditMode(false);load();};
+  const del=async(id)=>{await fetch("/api/notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",id})});setSelected(null);setEditMode(false);load();};
+  const openNote=(n)=>{setSelected(n);setTitle(n.title);setContent(n.content||"");setEditMode(false);};
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Notes" subtitle="Private notes. Encrypted. Only you can read them."/>
+    <div className="sg2" style={{display:"grid",gridTemplateColumns:selected?"300px 1fr":"1fr",gap:16}}>
+      <div>
+        <GoldBtn full onClick={create}>+ New Note</GoldBtn>
+        <div style={{marginTop:14}}>
+          {loading&&<Card style={{padding:16}}><div style={{fontSize:11,fontFamily:mono,color:C.textDim}}>Loading...</div></Card>}
+          {!loading&&notes.length===0&&<Card style={{padding:20,textAlign:"center"}}><div style={{fontSize:12,color:C.textDim,fontWeight:200}}>No notes yet.</div></Card>}
+          {notes.map((n)=><Card key={n.id} onClick={()=>openNote(n)} highlight={selected?.id===n.id} style={{padding:14,marginBottom:6,cursor:"pointer"}}>
+            <div style={{fontSize:13,fontWeight:400,marginBottom:4}}>{n.title||"Untitled"}</div>
+            <div style={{fontSize:11,color:C.textDim,fontWeight:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(n.content||"").slice(0,80)}</div>
+            <div style={{fontSize:9,color:C.textDim,fontFamily:mono,marginTop:6}}>{new Date(n.updated_at).toLocaleDateString()}</div>
+          </Card>)}
+        </div>
+      </div>
+      {selected&&<Card style={{padding:24}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+          <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase"}}>{editMode?"Editing":"Viewing"}</div>
+          <div style={{display:"flex",gap:6}}>
+            {!editMode&&<GoldBtn small onClick={()=>setEditMode(true)}>Edit</GoldBtn>}
+            {editMode&&<GoldBtn small onClick={save}>Save</GoldBtn>}
+            <GoldBtn small danger onClick={()=>del(selected.id)}>Delete</GoldBtn>
+          </div>
+        </div>
+        {editMode?<>
+          <Inp placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)}/>
+          <div style={{marginTop:10}}><Inp placeholder="Write your note..." value={content} onChange={e=>setContent(e.target.value)} area style={{minHeight:320}}/></div>
+        </>:<>
+          <h3 style={{fontSize:20,fontFamily:serif,fontWeight:400,marginBottom:12}}>{title||"Untitled"}</h3>
+          <div style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{content||<em style={{color:C.textDim}}>Empty note. Click Edit to add content.</em>}</div>
+        </>}
+      </Card>}
+    </div>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CPIR MASTER DASHBOARD (#4 — preview questions, assign via email)
+// ═══════════════════════════════════════════════════════════════════
+function PgCPIR(){
+  const[tab,setTab]=useState("assign");
+  const[loading,setLoading]=useState(false);
+  // Preview
+  const[previewQs,setPreviewQs]=useState(null);
+  const[loadingPreview,setLoadingPreview]=useState(false);
+  // Assign
+  const[seats,setSeats]=useState([]);
+  const[selectedEmail,setSelectedEmail]=useState("");
+  const[selectedName,setSelectedName]=useState("");
+  const[department,setDepartment]=useState("");
+  const[manualEmail,setManualEmail]=useState("");
+  const[assignResult,setAssignResult]=useState(null);
+  // Results
+  const[results,setResults]=useState([]);
+  const[selectedResult,setSelectedResult]=useState(null);
+
+  const loadSeats=async()=>{try{const r=await fetch("/api/seats");const d=await r.json();setSeats(Array.isArray(d)?d.filter(s=>s.status!=="removed"):[]);}catch(e){setSeats([]);}};
+  const loadResults=async()=>{try{const r=await fetch("/api/cpir");const d=await r.json();setResults(Array.isArray(d)?d:[]);}catch(e){setResults([]);}};
+  useEffect(()=>{loadSeats();loadResults();},[]);
+
+  const previewQuestions=async()=>{setLoadingPreview(true);
+    try{const r=await fetch("/api/cpir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"preview_questions"})});const d=await r.json();setPreviewQs(d.questions||[]);}catch(e){}setLoadingPreview(false);};
+
+  const assign=async()=>{const email=selectedEmail||manualEmail;if(!email.trim())return;setLoading(true);setAssignResult(null);
+    try{const r=await fetch("/api/cpir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"assign",employeeEmail:email,employeeName:selectedName||email,department})});const d=await r.json();setAssignResult(d);loadResults();}catch(e){}setLoading(false);};
+
+  const viewResult=async(id)=>{try{const r=await fetch("/api/cpir",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"view",id})});const d=await r.json();setSelectedResult(d);}catch(e){}};
+
+  if(selectedResult)return <div style={{animation:"fadeIn 0.3s ease"}}>
+    <GoldBtn small onClick={()=>setSelectedResult(null)}>← Back to Results</GoldBtn>
+    <SH title={`CPIR: ${selectedResult.employee_name}`} subtitle={`Assessment ${selectedResult.assessment_code}`}/>
+    <Card style={{padding:24}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>CPIR ASSESSMENT REPORT</div>
+      <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date(selectedResult.created_at).toLocaleString()}</div>
+      {selectedResult.dimensions?.analysis_text?<div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{selectedResult.dimensions.analysis_text}</div>:<div style={{fontSize:12,color:C.textDim}}>Assessment has not been completed by the employee yet.</div>}
+    </Card>
+  </div>;
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="CPIR Assessment" subtitle="Continuous Psychological Indicator Report. Behavioral risk assessment for insider threat detection."/>
+    <TabBar tabs={[["assign","Assign Test"],["preview","Preview Questions"],["results","Results ("+results.length+")"]]} active={tab} onChange={setTab}/>
+
+    {tab==="assign"&&<Card style={{padding:24,maxWidth:640}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:12}}>Assign New Assessment</div>
+      <p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:16}}>Select a team member or enter an email. The employee receives a unique link via email and completes the assessment without logging in. Results appear in your Results tab.</p>
+
+      {seats.length>0&&<div style={{marginBottom:14}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>Select from team</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {seats.map(s=><div key={s.id} onClick={()=>{setSelectedEmail(s.email);setSelectedName(s.email.split("@")[0]);setManualEmail("");}} style={{padding:"10px 14px",border:`1px solid ${selectedEmail===s.email?C.gold:C.border}`,borderRadius:3,background:selectedEmail===s.email?C.goldDim:"transparent",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
+            <span style={{fontSize:12,color:selectedEmail===s.email?C.gold:C.text}}>{s.email}</span>
+            <span style={{fontSize:10,fontFamily:mono,color:C.textDim}}>{s.role}</span>
+          </div>)}
+        </div>
+      </div>}
+
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>{seats.length>0?"Or enter email manually":"Enter employee email"}</div>
+        <Inp placeholder="employee@company.com" value={manualEmail} onChange={e=>{setManualEmail(e.target.value);setSelectedEmail("");setSelectedName("");}} mono/>
+      </div>
+
+      <div style={{marginBottom:12}}><Inp label="Employee Name (optional)" placeholder="Jane Doe" value={selectedName} onChange={e=>setSelectedName(e.target.value)}/></div>
+      <div style={{marginBottom:16}}><Inp label="Department (optional)" placeholder="e.g. Engineering" value={department} onChange={e=>setDepartment(e.target.value)}/></div>
+
+      <GoldBtn full onClick={assign} disabled={loading||(!selectedEmail&&!manualEmail.trim())}>{loading?"Assigning...":"Send Assessment Link"}</GoldBtn>
+
+      {assignResult?.success&&<div style={{marginTop:16,padding:"14px 16px",background:C.lowDim,border:"1px solid rgba(107,158,122,0.3)",borderRadius:3}}>
+        <div style={{fontSize:11,fontFamily:mono,color:C.low,marginBottom:6}}>✓ ASSESSMENT CREATED</div>
+        <div style={{fontSize:12,color:C.textSec,marginBottom:6}}>Email sent. Link also accessible at:</div>
+        <div style={{fontSize:11,fontFamily:mono,color:C.gold,wordBreak:"break-all"}}>{assignResult.assessmentUrl}</div>
+      </div>}
+      {assignResult?.error&&<div style={{marginTop:16,padding:"12px 16px",background:C.criticalDim,borderRadius:3,fontSize:12,color:C.critical}}>{assignResult.error}</div>}
+    </Card>}
+
+    {tab==="preview"&&<Card style={{padding:24}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase"}}>Question Preview</div>
+        <GoldBtn small onClick={previewQuestions} disabled={loadingPreview}>{loadingPreview?"Generating...":previewQs?"Regenerate":"Generate Preview"}</GoldBtn>
+      </div>
+      <p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:16}}>Review the type of questions used in the assessment. Questions are AI-generated per assignment to prevent gaming. Each question targets a specific risk dimension (loyalty, stress, financial, satisfaction, access, external, ideological).</p>
+      {loadingPreview&&<Loader text="Generating sample questions"/>}
+      {previewQs&&previewQs.map((q,i)=><div key={q.id} style={{padding:"12px 0",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
+        <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+          <span style={{fontSize:10,fontFamily:mono,color:C.gold,paddingTop:2,flexShrink:0}}>Q{i+1}</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,color:C.text,fontWeight:300,marginBottom:4}}>{q.text}</div>
+            <div style={{fontSize:10,fontFamily:mono,color:C.textDim,textTransform:"uppercase",letterSpacing:"1px"}}>Dimension: {q.dimension}</div>
+          </div>
+        </div>
+      </div>)}
+    </Card>}
+
+    {tab==="results"&&<Card style={{padding:20}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:12}}>Assessment Results</div>
+      {results.length===0&&<div style={{fontSize:12,color:C.textDim,fontWeight:200}}>No assessments assigned yet.</div>}
+      {results.map((r,i)=>{const completed=r.answers&&Object.keys(r.answers).length>0;return <div key={r.id} onClick={()=>completed&&viewResult(r.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:i>0?`1px solid ${C.border}`:"none",cursor:completed?"pointer":"default",flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:13,color:C.text}}>{r.employee_name||"Unnamed"}</div>
+          <div style={{fontSize:10,fontFamily:mono,color:C.textDim}}>{r.department||"No dept"} — {new Date(r.created_at).toLocaleDateString()} — Code: {r.assessment_code}</div>
+        </div>
+        <Badge severity={completed?"low":"high"} label={completed?"COMPLETED":"PENDING"}/>
+      </div>;})}
+    </Card>}
+  </div>;
+}
+
+
 const NAV=[
   {group:"Operations",items:[{id:"dash",label:"Command Center"},{id:"brief",label:"Daily Brief"},{id:"warroom",label:"War Room"},{id:"intel",label:"Intelligence Feed"},{id:"map",label:"Situation Map"},{id:"travel",label:"Travel Security"}]},
   {group:"Investigation",items:[{id:"osint",label:"OSINT Search"},{id:"linkmap",label:"Link Analysis"},{id:"identity",label:"Identity Verification"},{id:"fraud",label:"Fraud Detection"},{id:"breaches",label:"Breach Console"},{id:"darkweb",label:"Dark Web Intel"}]},
@@ -800,7 +994,8 @@ const NAV=[
   {group:"Protection",items:[{id:"invisible",label:"Make Me Invisible"},{id:"docintel",label:"Document Intel"},{id:"decoy",label:"Decoy Deployment"},{id:"honeytokens",label:"Deception Tech"},{id:"execprot",label:"Executive Protection"},{id:"evidence",label:"Evidence Chain"}]},
   {group:"Threat Analysis",items:[{id:"predict",label:"Threat Prediction"},{id:"predictive",label:"Predictive Forecast"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"},{id:"cases",label:"Case Management"}]},
   {group:"Family & Team",items:[{id:"family",label:"Family Protection"},{id:"seats",label:"Team Seats"}]},
-  {group:"Services",items:[{id:"reports",label:"Reports Center"},{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
+  {group:"Personal",items:[{id:"notes",label:"Notes"},{id:"reports",label:"Reports Center"}]},
+  {group:"Services",items:[{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
   {group:"System",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"}]},
 ];
 
@@ -834,21 +1029,35 @@ export default function SpyDashboard({user,isDemo}){
   const[page,setPage]=useState("dash");const[collapsed,setCollapsed]=useState(false);const[mobileNav,setMobileNav]=useState(false);
   const[showSplash,setShowSplash]=useState(true);const[showOnboarding,setShowOnboarding]=useState(!isDemo&&!user?.onboarded);
   const[accountType,setAccountType]=useState(user?.account_type||null);
+  const[lang,setLangState]=useState("en");
+  const[showTour,setShowTour]=useState(false);
   const router=useRouter();
   const tier=user?.tier||"observer";
   const subActive=isDemo||user?.subscription_status==="active"||user?.subscription_status==="trial";
+  const trialNeedsCard=!isDemo&&user?.trial_started_at&&!user?.card_on_file&&user?.subscription_status!=="active";
+  const mainRef=useRef(null);
+
+  // Language
+  useEffect(()=>{setLangState(getLang());const h=()=>setLangState(getLang());window.addEventListener("langchange",h);return()=>window.removeEventListener("langchange",h);},[]);
+  const tr=(k)=>T(k,lang);
 
   const handleSignOut=async()=>{if(isDemo){router.push("/");return;}const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.auth.signOut();router.push("/");router.refresh();};
-  const navClick=(id)=>{setPage(id);setMobileNav(false);};
+
+  // Scroll to top on page change (#7)
+  const scrollTop=()=>{if(mainRef.current)mainRef.current.scrollTop=0;window.scrollTo({top:0,behavior:"instant"});};
+  const navClick=(id)=>{setPage(id);setMobileNav(false);scrollTop();};
+  const setPageScroll=(id)=>{setPage(id);scrollTop();};
+
   const setAccountTypeFn=async(t)=>{setAccountType(t);if(!isDemo){try{const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.from("profiles").update({account_type:t,onboarded:true}).eq("id",user?.id);}catch(e){}}};
 
-  // Access control: check if current tier can access page
-  const premiumPages=["brief","warroom","osint","linkmap","identity","fraud","breaches","darkweb","footprint","social","imagescan","geospatial","docintel","suppress","decoy","execprot","evidence","predict","predictive","insider","cpir","cases","reports","travel","supplychain","family","honeytokens","invisible","ipscan","seats"];
-  const observerAllowed=["dash","intel","map","membership","consult","capabilities","settings","guide"];
+  // Access control
+  const premiumPages=["brief","warroom","osint","linkmap","identity","fraud","breaches","darkweb","footprint","social","imagescan","geospatial","docintel","suppress","decoy","execprot","evidence","predict","predictive","insider","cpir","cases","reports","travel","supplychain","family","honeytokens","invisible","ipscan","seats","notes"];
   const needsSub=(p)=>premiumPages.includes(p)&&tier==="observer"&&!isDemo;
 
   const rp=()=>{
-    if(showOnboarding&&!isDemo)return <Onboarding onComplete={()=>setShowOnboarding(false)} onSetAccountType={setAccountTypeFn}/>;
+    if(showOnboarding&&!isDemo)return <Onboarding onComplete={()=>{setShowOnboarding(false);if(!isDemo)setShowTour(true);}} onSetAccountType={setAccountTypeFn}/>;
+    // Trial gate: block everything except membership/settings/capabilities until card on file
+    if(trialNeedsCard&&!["membership","settings","capabilities","guide"].includes(page))return <TrialGate setPage={setPage} user={user}/>;
     if(needsSub(page))return <Paywall setPage={setPage}/>;
     switch(page){
     case"dash":return <PgDash go={setPage} user={user}/>;
@@ -874,7 +1083,8 @@ export default function SpyDashboard({user,isDemo}){
     case"execprot":return <PgAnalysis module="execprot" title="Executive Protection" subtitle="Exposure assessment." fields={[{key:"query",label:"Individual",placeholder:"Full name"},{key:"context",label:"Context",placeholder:"Role, threats, travel...",area:true}]}/>;
     case"predict":return <PgAnalysis module="threat" title="Threat Prediction" subtitle="Pattern-of-life analysis." fields={[{key:"query",label:"Subject",placeholder:"Describe scenario"},{key:"context",label:"Pattern of Life",placeholder:"Routines, habits...",area:true}]}/>;
     case"insider":return <PgAnalysis module="threat" title="Insider Threats" subtitle="Behavioral risk assessment." fields={[{key:"query",label:"Subject",placeholder:"Individual or department"},{key:"context",label:"Indicators",placeholder:"Changes, access patterns...",area:true}]}/>;
-    case"cpir":return <PgAnalysis module="threat" title="CPIR Assessment" subtitle="Psychological Indicator Report." fields={[{key:"query",label:"Subject",placeholder:"Individual or group"},{key:"context",label:"Observations",placeholder:"Morale, loyalty, stress...",area:true}]}/>;
+    case"cpir":return <PgCPIR/>;
+    case"notes":return <PgNotes/>;
     case"linkmap":return <PgAnalysis module="linkmap" title="Link Analysis" subtitle="Entity relationship mapping." fields={[{key:"query",label:"Entity",placeholder:"Name, company, domain",mono:true},{key:"type",label:"Type",placeholder:"person / company / domain"},{key:"context",label:"Known Links",placeholder:"Associations, ties...",area:true}]} apiRoute="/api/gemini/linkmap" bodyKey="entity"/>;
     case"darkweb":return <PgAnalysis module="darkweb" title="Dark Web Intelligence" subtitle="Underground monitoring." fields={[{key:"query",label:"Target",placeholder:"Email, domain, company",mono:true},{key:"type",label:"Type",placeholder:"email / domain / company"},{key:"context",label:"Context",placeholder:"Threat actors, incidents...",area:true}]} apiRoute="/api/gemini/darkweb" bodyKey="query"/>;
     case"identity":return <PgAnalysis module="identity" title="Identity Verification" subtitle="Authenticity scoring." fields={[{key:"query",label:"Full Name",placeholder:"First Last"},{key:"context",label:"Data",placeholder:"Email, company, credentials...",area:true}]} apiRoute="/api/gemini/identity" bodyKey="name"/>;
@@ -920,11 +1130,19 @@ export default function SpyDashboard({user,isDemo}){
   return <><style>{css}</style>
     {isDemo&&<div style={{background:C.goldDim,borderBottom:`1px solid rgba(196,162,101,0.2)`,padding:"5px 14px",fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"1px",textAlign:"center"}}>DEMO MODE — <a href="/signup" style={{color:C.gold,textDecoration:"underline"}}>Sign up</a> for full access.</div>}
     {mobileNav&&<div onClick={()=>setMobileNav(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:99}}/>}
+    {showTour&&<ProductTour steps={[
+      {title:"Welcome to your command center",desc:"This is your intelligence hub. From here you access every module. The left sidebar navigates between capabilities."},
+      {title:"Generate your first brief",desc:"Click 'Daily Brief' in the sidebar to generate a personalized intelligence briefing. This is your morning intelligence report — always current, always private."},
+      {title:accountType==="family"?"Add a family member":accountType==="business"?"Add a team member":"Run your first OSINT search",desc:accountType==="family"?"Visit 'Family Protection' to add a child and monitor their social media safety. No private messages — only public-facing content.":accountType==="business"?"Visit 'Team Seats' to invite employees. Each seat is $15/month. Then try 'Supply Chain' to scan your first vendor.":"Visit 'OSINT Search' to investigate any email, domain, person, or company. Every search auto-saves as a formal intelligence report."},
+      {title:"You are in control",desc:"All data is encrypted and isolated to your account. Nothing is shared. Everything is yours."},
+    ]} onComplete={async()=>{setShowTour(false);if(!isDemo&&user?.id){try{const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.from("profiles").update({tour_completed:true}).eq("id",user.id);}catch(e){}}}} onSkip={()=>setShowTour(false)}/>}
     <div style={{display:"flex",minHeight:"100vh",background:C.bg}}>
       <aside className={mobileNav?"ssb ssbo":"ssb"} style={{width:collapsed?56:220,background:C.bgSidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width 0.25s ease",flexShrink:0,overflow:"hidden"}}>
-        <div style={{padding:collapsed?"16px 8px":"16px 16px",borderBottom:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>{if(mobileNav)setMobileNav(false);else setCollapsed(!collapsed);}}>
+        <div style={{padding:collapsed?"16px 8px":"16px 16px",borderBottom:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>navClick("dash")} title="Home">
           {collapsed?<span style={{fontSize:14,fontFamily:serif,color:C.gold,letterSpacing:"2px",textAlign:"center",display:"block"}}>S</span>:<SpyLogo/>}
         </div>
+        {!collapsed&&<button onClick={()=>setCollapsed(true)} style={{padding:"4px 16px",border:"none",background:"transparent",color:C.textDim,fontSize:9,fontFamily:mono,letterSpacing:"1px",cursor:"pointer",textAlign:"left",borderBottom:`1px solid ${C.border}`}}>COLLAPSE</button>}
+        {collapsed&&<button onClick={()=>setCollapsed(false)} style={{padding:"4px",border:"none",background:"transparent",color:C.textDim,fontSize:11,cursor:"pointer",borderBottom:`1px solid ${C.border}`}}>›</button>}
         <nav style={{flex:1,overflowY:"auto",padding:"6px 5px"}}>
           {NAV.map(g=><div key={g.group} style={{marginBottom:3}}>
             {!collapsed&&<div style={{padding:"8px 10px 3px",fontSize:9,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{g.group}</div>}
@@ -942,11 +1160,16 @@ export default function SpyDashboard({user,isDemo}){
             <button className="smt" onClick={()=>setMobileNav(!mobileNav)} style={{display:"none",alignItems:"center",justifyContent:"center",width:30,height:30,border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.gold,cursor:"pointer",fontSize:13}}>☰</button>
             <span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{NAV.flatMap(g=>g.items).find(n=>n.id===page)?.label||"Command Center"}</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPage("settings")}>
-            <div style={{width:24,height:24,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.border}`,fontSize:10,fontFamily:serif,color:C.gold}}>{(user?.name||"O")[0]}</div>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <select value={lang} onChange={e=>{setLang(e.target.value);setLangState(e.target.value);}} style={{background:"transparent",border:`1px solid ${C.border}`,borderRadius:3,color:C.textDim,fontSize:10,fontFamily:mono,padding:"4px 8px",cursor:"pointer",letterSpacing:"1px"}}>
+              {LANGS.map(l=><option key={l.code} value={l.code} style={{background:C.bg,color:C.text}}>{l.code.toUpperCase()}</option>)}
+            </select>
+            <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPageScroll("settings")}>
+              <div style={{width:24,height:24,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.border}`,fontSize:10,fontFamily:serif,color:C.gold}}>{(user?.name||"O")[0]}</div>
+            </div>
           </div>
         </header>
-        <div className="smp" style={{flex:1,overflow:"auto",padding:"20px 24px"}}>{rp()}</div>
+        <div ref={mainRef} className="smp" style={{flex:1,overflow:"auto",padding:"20px 24px"}}>{rp()}</div>
         <footer style={{padding:"6px 24px",borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:4}}>
           <span style={{fontSize:8,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim}}>SPY BY ATLAS — DESIGNED BY INTELLIGENCE PROFESSIONALS</span>
           <span style={{display:"flex",alignItems:"center",gap:6,fontSize:8,fontFamily:mono,color:C.textDim}}><span style={{width:4,height:4,borderRadius:"50%",background:C.low,animation:"glow 3s infinite"}}/>ENCRYPTED</span>

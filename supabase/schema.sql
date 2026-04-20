@@ -13,9 +13,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   trial_started_at TIMESTAMPTZ,
   trial_ends_at TIMESTAMPTZ,
   subscription_status TEXT DEFAULT 'inactive' CHECK (subscription_status IN ('inactive','trial','active','cancelled','past_due')),
+  card_on_file BOOLEAN DEFAULT FALSE,
   paddle_customer_id TEXT,
   paddle_subscription_id TEXT,
   onboarded BOOLEAN DEFAULT FALSE,
+  tour_completed BOOLEAN DEFAULT FALSE,
+  eula_accepted_at TIMESTAMPTZ,
+  explicit_content_accepted_at TIMESTAMPTZ,
+  email_reports_preference TEXT DEFAULT 'platform_only' CHECK (email_reports_preference IN ('platform_only','email_only','both')),
+  preferred_language TEXT DEFAULT 'en' CHECK (preferred_language IN ('en','fr','de')),
   timezone TEXT DEFAULT 'UTC+3',
   language TEXT DEFAULT 'en',
   sector_focus TEXT DEFAULT 'All Sectors',
@@ -148,6 +154,18 @@ CREATE TABLE IF NOT EXISTS public.supply_chain (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ═══ NOTES ═══
+CREATE TABLE IF NOT EXISTS public.notes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  title TEXT DEFAULT 'Untitled',
+  content TEXT DEFAULT '',
+  color TEXT DEFAULT 'default',
+  pinned BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ═══ ADMIN LOG ═══
 CREATE TABLE IF NOT EXISTS public.admin_log (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -167,6 +185,7 @@ ALTER TABLE public.image_scans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.honeytokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.suppression_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supply_chain ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "own" ON public.profiles FOR ALL USING (auth.uid() = id);
 CREATE POLICY "own" ON public.seats FOR ALL USING (master_id = auth.uid() OR user_id = auth.uid());
@@ -179,6 +198,7 @@ CREATE POLICY "own" ON public.image_scans FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "own" ON public.honeytokens FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "own" ON public.suppression_requests FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "own" ON public.supply_chain FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "own" ON public.notes FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "read" ON public.breach_entries FOR SELECT USING (auth.role() = 'authenticated');
 
 -- Auto-create profile

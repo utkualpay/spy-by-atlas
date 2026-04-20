@@ -12,7 +12,7 @@ export default function LandingPage(){
   const[cf,setCf]=useState({name:"",email:"",message:""});const[cs,setCs]=useState(false);const[cl,setCl]=useState(false);
   const sendC=async()=>{if(!cf.email.trim()||!cf.message.trim())return;setCl(true);try{await fetch(`https://formspree.io/f/${FORMSPREE}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({_subject:"[Spy] Contact",name:cf.name,email:cf.email,message:cf.message,timestamp:new Date().toISOString()})});setCs(true);}catch(e){}setCl(false);};
   const inp={width:"100%",padding:"14px 16px",background:"rgba(255,255,255,0.03)",border:`1px solid ${C.border}`,borderRadius:3,color:C.text,fontSize:14,fontFamily:sans,outline:"none",fontWeight:200,boxSizing:"border-box"};
-  const features=[{t:"OSINT Search",d:"Analyst-grade intelligence across social platforms, breach databases, and the open web."},{t:"War Room",d:"Direct AI-powered intelligence expert. Real-time analyst guidance for any situation."},{t:"Breach Console",d:"Cross-reference credentials against breach databases with formal impact assessments."},{t:"Social Monitoring",d:"Continuous security monitoring of your social media presence."},{t:"Threat Prediction",d:"Pattern-of-life analysis to preempt security risks before they materialize."},{t:"Executive Protection",d:"Canary tokens, data poisoning, digital decoys for high-value individuals."},{t:"Daily Briefs",d:"Personalized intelligence briefs written by analysts, not algorithms."},{t:"Document Intel",d:"Fuzzy-hash leak detection for edited, translated, or obfuscated files."}];
+  const features=[{t:"OSINT Search",d:"Every public mention. Every associated email. Every platform. Compiled in minutes. No tool gives you a fuller picture."},{t:"War Room",d:"A senior intelligence analyst on call at any hour. Brief them on a situation, receive a professional threat assessment in return."},{t:"Breach Console",d:"Your credentials appear in leaks. You find out when we tell you — not when someone uses them against you."},{t:"Social Monitoring",d:"What your online presence says about you to anyone looking. What it says to those who shouldn't be."},{t:"Threat Prediction",d:"Adversaries follow patterns. We map yours, then we map theirs. Then we tell you where the overlap is."},{t:"Executive Protection",d:"Decoy files that trace leakers. Poisoned data that corrupts stolen datasets. Tradecraft, adapted for the private sector."},{t:"Daily Briefs",d:"A morning briefing calibrated to your exposure, your sector, your threat environment. Read it. Decide your day."},{t:"Make Me Invisible",d:"One button. Fifteen data brokers. GDPR and CCPA deletion requests. Your presence begins to recede the moment you click it."}];
   const tiers=[{id:"obs",n:"Observer",p:"Free",f:["Situation map","Intel feed (limited)","Platform preview"]},{id:"a",n:"Personal Pro",p:"$49",r:true,f:["7-day free trial","Unlimited OSINT","Daily briefs","War Room","Data broker removal","Social monitoring","Travel security","Reports archive"]},{id:"d",n:"Business Premium",p:"$149",desc:"+$15/seat",f:["Everything in Personal Pro","Supply chain intel","Dark web monitoring","Deception technology","Team seats ($15/ea)","Identity verification","Fraud detection","Case management"]},{id:"e",n:"Executive",p:"Custom",f:["Everything in Business","Dedicated analyst team","Deepfake poisoning","Custom integrations","SLA guarantee"]}];
 
   return <div style={{minHeight:"100vh",background:C.bg,overflow:"hidden"}}>
@@ -27,18 +27,24 @@ export default function LandingPage(){
     </nav>
 
     <div className="lsec" style={{maxWidth:900,margin:"0 auto",padding:"70px 60px 50px",textAlign:"center",position:"relative",zIndex:1,animation:"fadeIn 1s ease"}}>
-      <div style={{fontSize:11,fontFamily:mono,letterSpacing:"4px",color:C.gold,textTransform:"uppercase",marginBottom:20}}>Designed & Operated by Intelligence Experts</div>
-      <h1 className="lh1" style={{fontSize:62,fontFamily:serif,fontWeight:300,lineHeight:1.1,letterSpacing:"-1px",marginBottom:20}}>Know everything.<br/>Before everyone.</h1>
-      <p style={{fontSize:15,color:C.textSec,fontWeight:200,lineHeight:1.7,maxWidth:540,margin:"0 auto 36px"}}>Spy by Atlas is a private intelligence platform built by intelligence professionals. Continuous awareness of your digital exposure, competitive landscape, and global threat environment.</p>
-      <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}><GB href="/signup">Get Started</GB><GB href="/demo" outline>View Demo</GB></div>
+      <div style={{fontSize:11,fontFamily:mono,letterSpacing:"4px",color:C.gold,textTransform:"uppercase",marginBottom:20}}>They already know about you.</div>
+      <h1 className="lh1" style={{fontSize:62,fontFamily:serif,fontWeight:300,lineHeight:1.1,letterSpacing:"-1px",marginBottom:20}}>The question is<br/>whether you know.</h1>
+      <p style={{fontSize:16,color:C.textSec,fontWeight:200,lineHeight:1.75,maxWidth:560,margin:"0 auto 16px"}}>Your email is in databases you've never heard of. Your face is indexed. Your routines are predictable. Someone, somewhere, is building a profile on you right now.</p>
+      <p style={{fontSize:15,color:C.textSec,fontWeight:200,lineHeight:1.75,maxWidth:540,margin:"0 auto 36px",fontStyle:"italic"}}>Spy by Atlas tells you what they already know. Then it helps you take it back.</p>
+      <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}><GB href="/signup">See What They Know</GB><GB href="/demo" outline>View Demo</GB></div>
+      <div style={{marginTop:36,fontSize:11,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase"}}>7-day free trial — full access — cancel anytime</div>
     </div>
 
     <div className="lst" style={{display:"flex",justifyContent:"center",gap:50,padding:"30px 20px",position:"relative",zIndex:1,flexWrap:"wrap"}}>
-      {[["46+","Active conflicts"],["24","Intel sources"],["20+","Zones tracked"],["24/7","Analyst support"]].map(([v,l],i)=><div key={i} style={{textAlign:"center"}}><div className="lstv" style={{fontSize:34,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:2}}>{v}</div><div style={{fontSize:10,color:C.textDim,fontFamily:mono,letterSpacing:".8px"}}>{l}</div></div>)}
+      {[["3.2B","Records monitored"],["24","Intel sources"],["46+","Active conflicts tracked"],["24/7","Analyst support"]].map(([v,l],i)=><div key={i} style={{textAlign:"center"}}><div className="lstv" style={{fontSize:34,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:2}}>{v}</div><div style={{fontSize:10,color:C.textDim,fontFamily:mono,letterSpacing:".8px"}}>{l}</div></div>)}
     </div>
 
-    <div className="lsec" style={{maxWidth:800,margin:"30px auto",padding:"0 60px",textAlign:"center",position:"relative",zIndex:1}}>
-      <div style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:4,padding:"20px 28px"}}><div style={{fontSize:11,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Every feature is built on methodologies used by professional intelligence teams. Our analysts hold backgrounds in national security, counterintelligence, and corporate investigation. Data sourced from <span style={{color:C.gold}}>CFR</span>, <span style={{color:C.gold}}>ACLED</span>, <span style={{color:C.gold}}>ICG</span>, <span style={{color:C.gold}}>ISW</span>, <span style={{color:C.gold}}>IISS</span>, and <span style={{color:C.gold}}>SIPRI</span>.</div></div>
+    <div className="lsec" style={{maxWidth:820,margin:"30px auto",padding:"0 60px",textAlign:"center",position:"relative",zIndex:1}}>
+      <div style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:4,padding:"28px 32px"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.gold,textTransform:"uppercase",marginBottom:12}}>Built by former intelligence professionals</div>
+        <div style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.75,marginBottom:12}}>We are not a tech company. We are intelligence practitioners who built the tools we wished we had on the outside. Every module — every workflow — reflects methodology used in national security, counterintelligence, and corporate investigation.</div>
+        <div style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6}}>Data sourced from <span style={{color:C.gold}}>CFR</span>, <span style={{color:C.gold}}>ACLED</span>, <span style={{color:C.gold}}>ICG</span>, <span style={{color:C.gold}}>ISW</span>, <span style={{color:C.gold}}>IISS</span>, and <span style={{color:C.gold}}>SIPRI</span>.</div>
+      </div>
     </div>
 
     <div id="features" className="lsec" style={{maxWidth:1100,margin:"50px auto 0",padding:"0 60px",position:"relative",zIndex:1}}>
@@ -74,6 +80,8 @@ export default function LandingPage(){
         <Link href="/pricing" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Pricing</Link>
         <Link href="/terms" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Terms</Link>
         <Link href="/privacy" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Privacy</Link>
+        <Link href="/eula" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>EULA</Link>
+        <Link href="/explicit-content" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Conduct</Link>
         <Link href="/refund" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Refunds</Link>
         <Link href="/cookies" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Cookies</Link>
         <Link href="/acceptable-use" style={{fontSize:10,color:C.textDim,fontFamily:mono,textDecoration:"none"}}>Acceptable Use</Link>
