@@ -61,6 +61,85 @@ function GoldBtn({children,onClick,full,small,disabled,danger}){const[h,setH]=us
 function Inp({placeholder,value,onChange,mono:im,area,onKeyDown,label,style:st}){const s={width:"100%",padding:area?"14px 16px":"11px 16px",background:C.bgInput,border:`1px solid ${C.border}`,borderRadius:3,color:C.text,fontSize:13,fontFamily:im?mono:sans,outline:"none",fontWeight:300,transition:"border-color 0.3s",resize:area?"vertical":"none",boxSizing:"border-box",maxWidth:"100%",...st};return <div style={{width:"100%"}}>{label&&<div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{label}</div>}{area?<textarea style={{...s,minHeight:90}} placeholder={placeholder} value={value} onChange={onChange} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.border}/>:<input style={s} placeholder={placeholder} value={value} onChange={onChange} onKeyDown={onKeyDown} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.border}/>}</div>;}
 function TabBar({tabs,active,onChange}){return <div style={{display:"flex",gap:1,marginBottom:20,background:C.bgCard,borderRadius:3,padding:3,border:`1px solid ${C.border}`,width:"fit-content",flexWrap:"wrap"}}>{tabs.map(([k,l])=><button key={k} onClick={()=>onChange(k)} style={{padding:"7px 16px",border:"none",borderRadius:2,fontSize:11,fontWeight:400,cursor:"pointer",fontFamily:sans,background:active===k?C.gold:"transparent",color:active===k?C.bg:C.textSec}}>{l}</button>)}</div>;}
 function Loader({text}){return <Card style={{padding:40,textAlign:"center"}}><div style={{fontSize:12,color:C.gold,fontFamily:mono,letterSpacing:"2px",marginBottom:16,textTransform:"uppercase"}}>{text||"Processing..."}</div><div style={{width:200,height:2,background:C.border,margin:"0 auto",borderRadius:1,overflow:"hidden",position:"relative"}}><div style={{position:"absolute",width:"40%",height:"100%",background:C.gold,animation:"scanline 1.5s ease infinite"}}/></div></Card>;}
+
+// ── DROPDOWN — themed replacement for <select> ───────────────────────
+function Dropdown({value,onChange,options,label,small,placeholder,align}){
+  const[open,setOpen]=useState(false);const ref=useRef(null);
+  useEffect(()=>{const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
+  const current=options.find(o=>(typeof o==="string"?o:o.value)===value);
+  const currentLabel=current?(typeof current==="string"?current:current.label):(placeholder||"Select");
+  return <div ref={ref} style={{position:"relative",width:small?"auto":"100%"}}>
+    {label&&<div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{label}</div>}
+    <button onClick={()=>setOpen(!open)} style={{width:small?"auto":"100%",padding:small?"6px 12px":"11px 16px",background:C.bgInput,border:`1px solid ${open?C.gold:C.border}`,borderRadius:3,color:value?C.text:C.textDim,fontSize:small?10:13,fontFamily:small?mono:sans,fontWeight:small?400:300,letterSpacing:small?"1px":"0",textAlign:"left",cursor:"pointer",transition:"border-color 0.2s",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+      <span>{currentLabel}</span>
+      <span style={{color:C.gold,fontSize:9,transition:"transform 0.2s",transform:open?"rotate(180deg)":"none",fontFamily:mono}}>▾</span>
+    </button>
+    {open&&<div style={{position:"absolute",top:"calc(100% + 4px)",[align==="right"?"right":"left"]:0,minWidth:small?120:"100%",background:C.bgCard,border:`1px solid ${C.gold}`,borderRadius:3,boxShadow:"0 8px 24px rgba(0,0,0,0.5)",zIndex:50,overflow:"hidden",animation:"fadeIn 0.15s ease",maxHeight:280,overflowY:"auto"}}>
+      {options.map(o=>{const v=typeof o==="string"?o:o.value;const l=typeof o==="string"?o:o.label;const desc=typeof o==="object"?o.desc:null;return <div key={v} onClick={()=>{onChange(v);setOpen(false);}} style={{padding:small?"8px 12px":"10px 14px",cursor:"pointer",background:value===v?C.goldDim:"transparent",color:value===v?C.gold:C.text,fontSize:small?10:12,fontWeight:value===v?500:300,fontFamily:small?mono:sans,letterSpacing:small?"1px":"0",borderBottom:`1px solid ${C.border}`,transition:"background 0.15s"}} onMouseEnter={e=>{if(value!==v)e.currentTarget.style.background=C.bgHover;}} onMouseLeave={e=>{if(value!==v)e.currentTarget.style.background="transparent";}}>
+        <div>{l}</div>
+        {desc&&<div style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:2,fontFamily:sans,letterSpacing:"0"}}>{desc}</div>}
+      </div>;})}
+    </div>}
+  </div>;
+}
+
+// ── WIZARD — step-based guided flow (replaces forms) ──────────────────
+function Wizard({steps,onComplete,onCancel,submitLabel="Generate Report"}){
+  const[idx,setIdx]=useState(0);const[data,setData]=useState({});const[submitting,setSubmitting]=useState(false);
+  const step=steps[idx];const isLast=idx===steps.length-1;
+  const canAdvance=!step.required||data[step.key]!==undefined&&data[step.key]!=="";
+  const advance=async()=>{
+    if(!canAdvance)return;
+    if(isLast){setSubmitting(true);await onComplete(data);setSubmitting(false);}
+    else{setIdx(idx+1);}
+  };
+  const back=()=>idx>0&&setIdx(idx-1);
+
+  return <Card style={{padding:28,maxWidth:620,animation:"fadeIn 0.4s ease"}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+      {steps.map((s,i)=><div key={i} style={{flex:1,minWidth:20,height:3,borderRadius:2,background:i<=idx?C.gold:C.border,transition:"background 0.3s"}}/>)}
+    </div>
+    <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Step {idx+1} of {steps.length}</div>
+    <div style={{fontSize:22,fontFamily:serif,fontWeight:300,marginBottom:6}}>{step.title}</div>
+    {step.desc&&<p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:20}}>{step.desc}</p>}
+
+    <div style={{marginBottom:24}}>
+      {step.type==="choice"&&<div style={{display:"grid",gridTemplateColumns:`repeat(${step.columns||1},1fr)`,gap:10}}>
+        {step.options.map(o=><div key={o.value} onClick={()=>setData({...data,[step.key]:o.value})} style={{padding:"14px 16px",border:`1px solid ${data[step.key]===o.value?C.gold:C.border}`,borderRadius:3,background:data[step.key]===o.value?C.goldDim:C.bgInput,cursor:"pointer",transition:"all 0.2s"}}>
+          <div style={{fontSize:13,fontWeight:data[step.key]===o.value?500:400,color:data[step.key]===o.value?C.gold:C.text,marginBottom:o.desc?4:0}}>{o.label}</div>
+          {o.desc&&<div style={{fontSize:11,color:C.textDim,fontWeight:200,lineHeight:1.4}}>{o.desc}</div>}
+        </div>)}
+      </div>}
+      {step.type==="dropdown"&&<Dropdown value={data[step.key]||""} onChange={v=>setData({...data,[step.key]:v})} options={step.options} placeholder={step.placeholder}/>}
+      {step.type==="input"&&<Inp placeholder={step.placeholder} value={data[step.key]||""} onChange={e=>setData({...data,[step.key]:e.target.value})} mono={step.mono}/>}
+      {step.type==="textarea"&&<Inp placeholder={step.placeholder} value={data[step.key]||""} onChange={e=>setData({...data,[step.key]:e.target.value})} area/>}
+    </div>
+
+    <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8}}>
+        {idx>0&&<GoldBtn small onClick={back}>← Back</GoldBtn>}
+        {onCancel&&idx===0&&<button onClick={onCancel} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,letterSpacing:"1px"}}>Cancel</button>}
+      </div>
+      <GoldBtn onClick={advance} disabled={!canAdvance||submitting}>
+        {submitting?"Processing...":isLast?submitLabel:"Next →"}
+      </GoldBtn>
+    </div>
+  </Card>;
+}
+
+// ── QUICK TARGETS — preset suggestion cards ──────────────────────────
+function QuickTargets({title,targets,onPick}){
+  return <Card style={{padding:24,marginBottom:16}}>
+    <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{title||"Quick Start"}</div>
+    <div className="sg3" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+      {targets.map((t,i)=><div key={i} onClick={()=>onPick(t)} style={{padding:"14px 16px",border:`1px solid ${C.border}`,borderRadius:3,background:C.bgInput,cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=C.gold;e.currentTarget.style.background=C.goldDim;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.background=C.bgInput;}}>
+        <div style={{fontSize:11,fontFamily:mono,color:C.gold,letterSpacing:"1px",textTransform:"uppercase",marginBottom:4}}>{t.icon||"◆"} {t.label}</div>
+        {t.desc&&<div style={{fontSize:11,color:C.textDim,fontWeight:200,lineHeight:1.4}}>{t.desc}</div>}
+      </div>)}
+    </div>
+  </Card>;
+}
+
 function SpyLogo({size="normal"}){const sz=size==="large"?{fs:56,sub:9}:{fs:22,sub:7};return <div style={{display:"flex",alignItems:"baseline",gap:3}}><span style={{fontSize:sz.fs,fontFamily:serif,fontWeight:300,color:C.gold,letterSpacing:"3px",lineHeight:1}}>Spy</span><span style={{fontSize:sz.sub,color:C.textDim,fontFamily:mono,letterSpacing:"1.5px"}}>by Atlas</span></div>;}
 
 // ── SPLASH (#7) ──────────────────────────────────────────────────────
@@ -409,24 +488,66 @@ return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Situation Map" sub
 // ═══════════════════════════════════════════════════════════════════
 // PAGE: GENERIC ANALYSIS (#1 — each with custom form)
 // ═══════════════════════════════════════════════════════════════════
-function PgAnalysis({module,title,subtitle,fields,apiRoute,bodyKey,extraBody}){
-  const[form,setForm]=useState({});const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
-  const submit=async()=>{const q=form.query||form.target||form.subject||"";if(!q.trim())return;setLoading(true);setResult(null);
+function PgAnalysis({module,title,subtitle,fields,apiRoute,bodyKey,extraBody,quickTargets,targetLabel,contextOptions,typeOptions}){
+  const[mode,setMode]=useState("picker"); // picker → wizard → loading/result
+  const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);const[presetData,setPresetData]=useState({});
+
+  const runAnalysis=async(data)=>{
+    const q=data.target||data.query||"";if(!q.trim())return;
+    setMode("loading");setLoading(true);setResult(null);
     try{
       const route=apiRoute||"/api/gemini/analyze";
-      const body=apiRoute?{[bodyKey||"query"]:q+(form.context?`\nContext: ${form.context}`:""),...(extraBody||{}),additionalData:form.context||"",context:form.context||"",assets:form.context||"",entityType:form.type||"entity",queryType:form.type||"entity"}:{query:q+(form.context?`\n\nAdditional context: ${form.context}`:""),type:form.type||"general",module};
-      const r=await fetch(route,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();setResult(d);
-    }catch(e){}setLoading(false);};
+      const context=[data.context,data.detail].filter(Boolean).join(" — ");
+      const body=apiRoute?{[bodyKey||"query"]:q+(context?`\nContext: ${context}`:""),...(extraBody||{}),additionalData:context,context,assets:context,entityType:data.type||"entity",queryType:data.type||"entity"}:{query:q+(context?`\n\nAdditional context: ${context}`:""),type:data.type||"general",module};
+      const r=await fetch(route,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const d=await r.json();setResult(d);
+    }catch(e){setResult({error:"Analysis failed. Please try again."});}
+    setLoading(false);setMode("result");
+  };
+
+  const pickPreset=(preset)=>{
+    setPresetData({target:preset.target||"",type:preset.type||"",context:preset.context||""});
+    setMode("wizard");
+  };
+
+  const startFresh=()=>{setPresetData({});setMode("wizard");};
+
+  // Build wizard steps dynamically
+  const wizardSteps=[];
+  if(typeOptions&&typeOptions.length>0){
+    wizardSteps.push({key:"type",type:"choice",columns:typeOptions.length>3?2:typeOptions.length,title:"What are you investigating?",desc:"Select the target type to tailor the analysis methodology.",options:typeOptions,required:true});
+  }
+  wizardSteps.push({key:"target",type:"input",title:targetLabel||"Target",desc:"Enter the specific subject to investigate.",placeholder:fields?.[0]?.placeholder||"Enter target",mono:true,required:true});
+  if(contextOptions&&contextOptions.length>0){
+    wizardSteps.push({key:"context",type:"choice",columns:1,title:"Add context",desc:"Pick a pre-set focus. This tells the analyst where to look first.",options:[...contextOptions,{value:"custom",label:"Something else (add details manually)",desc:"Open a free-form field for custom context."}]});
+  }
+  wizardSteps.push({key:"detail",type:"textarea",title:"Additional details (optional)",desc:"Anything else the analyst should know? You can skip this.",placeholder:"Background, known associations, specific concerns..."});
+
   return <div style={{animation:"fadeIn 0.4s ease"}}><SH title={title} subtitle={subtitle}/>
-    <Card style={{padding:24,marginBottom:16,maxWidth:600}}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {(fields||[]).map((f,i)=><Inp key={i} label={f.label} placeholder={f.placeholder} value={form[f.key]||""} onChange={e=>setForm({...form,[f.key]:e.target.value})} area={f.area} mono={f.mono}/>)}
-        <GoldBtn full onClick={submit} disabled={loading}>{loading?"Analyzing...":"Submit for Analysis"}</GoldBtn>
+
+    {mode==="picker"&&<div>
+      {quickTargets&&quickTargets.length>0?<>
+        <QuickTargets title="Common Targets — One Click" targets={quickTargets} onPick={pickPreset}/>
+        <div style={{textAlign:"center",margin:"12px 0 16px"}}><span style={{fontSize:10,fontFamily:mono,color:C.textDim,letterSpacing:"2px"}}>OR</span></div>
+      </>:null}
+      <div style={{textAlign:"center"}}>
+        <GoldBtn onClick={startFresh}>Start Custom Analysis</GoldBtn>
       </div>
-    </Card>
-    {loading&&<Loader text="Conducting deep analysis — 30-60 seconds"/>}
-    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{title.toUpperCase()} REPORT</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
-    {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
+    </div>}
+
+    {mode==="wizard"&&<Wizard steps={wizardSteps.map(s=>({...s,...(presetData[s.key]?{}:null)}))} onComplete={runAnalysis} onCancel={()=>setMode("picker")} submitLabel="Generate Report"/>}
+
+    {mode==="loading"&&<Loader text="Conducting deep analysis — 30-60 seconds"/>}
+
+    {mode==="result"&&<>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setMode("picker");setResult(null);}}>← New Analysis</GoldBtn></div>
+      {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{title.toUpperCase()} REPORT</div>
+        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div>
+        <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div>
+      </Card>}
+      {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
+    </>}
   </div>;
 }
 
@@ -633,126 +754,303 @@ function IPScanWidget(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// TRAVEL SECURITY (#8)
+// TRAVEL SECURITY — click-based flow (#8)
 // ═══════════════════════════════════════════════════════════════════
 function PgTravel(){
-  const[form,setForm]=useState({destination:"",flight:"",hotel:"",dates:"",purpose:""});const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
-  const submit=async()=>{if(!form.destination.trim())return;setLoading(true);setResult(null);
-    try{const r=await fetch("/api/gemini/travel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(form)});setResult(await r.json());}catch(e){}setLoading(false);};
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Travel Security" subtitle="Pre-travel intelligence briefings. Cross-references kinetic threats, cyber risks, and geopolitical data."/>
-    <Card style={{padding:24,maxWidth:600,marginBottom:16}}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Inp label="Destination *" placeholder="City, Country" value={form.destination} onChange={e=>setForm({...form,destination:e.target.value})}/>
-        <Inp label="Flight Details" placeholder="Airline, flight number, date" value={form.flight} onChange={e=>setForm({...form,flight:e.target.value})}/>
-        <Inp label="Hotel" placeholder="Hotel name and address" value={form.hotel} onChange={e=>setForm({...form,hotel:e.target.value})}/>
-        <Inp label="Travel Dates" placeholder="e.g. 15 May — 22 May 2026" value={form.dates} onChange={e=>setForm({...form,dates:e.target.value})}/>
-        <Inp label="Purpose" placeholder="Business / Personal / Diplomatic" value={form.purpose} onChange={e=>setForm({...form,purpose:e.target.value})}/>
-        <GoldBtn full onClick={submit} disabled={loading}>{loading?"Generating Dossier...":"Generate Travel Brief"}</GoldBtn>
-      </div></Card>
-    {loading&&<Loader text="Compiling travel security dossier — 30-60 seconds"/>}
-    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>PRE-TRAVEL SECURITY DOSSIER</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+  const[stage,setStage]=useState("picker");const[form,setForm]=useState({});const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+
+  const DESTINATIONS=[
+    {value:"london",label:"London, UK",desc:"United Kingdom"},
+    {value:"paris",label:"Paris, France"},
+    {value:"berlin",label:"Berlin, Germany"},
+    {value:"nyc",label:"New York, USA"},
+    {value:"dubai",label:"Dubai, UAE"},
+    {value:"singapore",label:"Singapore"},
+    {value:"tokyo",label:"Tokyo, Japan"},
+    {value:"istanbul",label:"Istanbul, Türkiye"},
+    {value:"hongkong",label:"Hong Kong"},
+    {value:"mexico_city",label:"Mexico City, Mexico"},
+    {value:"sao_paulo",label:"São Paulo, Brazil"},
+    {value:"johannesburg",label:"Johannesburg, South Africa"},
+    {value:"custom",label:"Other destination — specify"},
+  ];
+
+  const submit=async(data)=>{setLoading(true);setResult(null);setStage("loading");
+    const destLabel=DESTINATIONS.find(d=>d.value===data.destination)?.label||data.customDest||data.destination;
+    try{const r=await fetch("/api/gemini/travel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({destination:destLabel,flight:data.flight||"",hotel:data.hotel||"",dates:data.dates||"",purpose:data.purpose||""})});setResult(await r.json());}catch(e){setResult({error:"Briefing failed."});}setLoading(false);setStage("result");};
+
+  const steps=[
+    {key:"destination",type:"dropdown",title:"Where are you going?",desc:"Pick your destination.",options:DESTINATIONS,placeholder:"Select destination",required:true},
+    {key:"purpose",type:"choice",columns:2,title:"Purpose of travel",desc:"This shapes the threat assessment focus.",options:[{value:"business",label:"Business",desc:"Meetings, negotiations"},{value:"leisure",label:"Leisure",desc:"Personal or family"},{value:"diplomatic",label:"Diplomatic",desc:"Official representation"},{value:"high_profile",label:"High-profile event",desc:"Conference, summit"}],required:true},
+    {key:"duration",type:"choice",columns:2,title:"How long?",desc:"Trip duration affects the briefing depth.",options:[{value:"day_trip",label:"Day trip"},{value:"short",label:"2–4 days"},{value:"week",label:"About a week"},{value:"extended",label:"Two weeks or more"}]},
+    {key:"risk_focus",type:"choice",columns:2,title:"Primary concern",desc:"We'll prioritize this in the dossier.",options:[{value:"kinetic",label:"Physical security",desc:"Crime, terrorism, unrest"},{value:"cyber",label:"Cyber & surveillance",desc:"Wi-Fi intercept, tracking"},{value:"geopolitical",label:"Geopolitical",desc:"Regional instability"},{value:"comprehensive",label:"Full spectrum",desc:"Cover everything"}]},
+  ];
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Travel Security" subtitle="Pre-travel intelligence briefings. Kinetic threats, cyber risks, geopolitical context."/>
+    {stage==="picker"&&<Card style={{padding:32,textAlign:"center"}}>
+      <div style={{fontSize:32,marginBottom:12}}>✈</div>
+      <div style={{fontSize:20,fontFamily:serif,fontWeight:300,marginBottom:10}}>Plan a Secure Trip</div>
+      <p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,maxWidth:440,margin:"0 auto 24px"}}>A guided briefing covering kinetic threats at your destination, Wi-Fi intercept risks at your hotel, geopolitical situation, and emergency contacts. Four quick questions.</p>
+      <GoldBtn onClick={()=>setStage("wizard")}>Begin Travel Briefing</GoldBtn>
+    </Card>}
+    {stage==="wizard"&&<Wizard steps={steps} onComplete={submit} onCancel={()=>setStage("picker")} submitLabel="Generate Dossier"/>}
+    {stage==="loading"&&<Loader text="Compiling travel security dossier"/>}
+    {stage==="result"&&<>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setStage("picker");setResult(null);}}>← Plan Another Trip</GoldBtn></div>
+      {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>PRE-TRAVEL SECURITY DOSSIER</div>
+        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div>
+        <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div>
+      </Card>}
+      {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
+    </>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SUPPLY CHAIN (#7)
+// SUPPLY CHAIN — click-based flow (#7)
 // ═══════════════════════════════════════════════════════════════════
 function PgSupplyChain(){
-  const[domain,setDomain]=useState("");const[name,setName]=useState("");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
-  const scan=async()=>{if(!domain.trim())return;setLoading(true);setResult(null);
-    try{const r=await fetch("/api/gemini/supply-chain",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({vendorDomain:domain,vendorName:name})});setResult(await r.json());}catch(e){}setLoading(false);};
+  const[stage,setStage]=useState("picker");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+
+  const submit=async(data)=>{setLoading(true);setResult(null);setStage("loading");
+    try{const r=await fetch("/api/gemini/supply-chain",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({vendorDomain:data.domain,vendorName:data.name||data.domain})});setResult(await r.json());}catch(e){setResult({error:"Scan failed."});}setLoading(false);setStage("result");};
+
+  const steps=[
+    {key:"domain",type:"input",title:"Vendor domain",desc:"The website of the subcontractor or supplier.",placeholder:"vendor.com",mono:true,required:true},
+    {key:"name",type:"input",title:"Vendor name (optional)",desc:"Formal company name for the report.",placeholder:"Vendor Company Inc."},
+    {key:"category",type:"choice",columns:2,title:"Vendor category",desc:"Sets the risk framework.",options:[{value:"it_saas",label:"IT / SaaS",desc:"Software or cloud services"},{value:"logistics",label:"Logistics",desc:"Shipping, warehousing"},{value:"manufacturing",label:"Manufacturing",desc:"Physical supply chain"},{value:"professional",label:"Professional services",desc:"Legal, consulting, accounting"},{value:"financial",label:"Financial services",desc:"Banking, payments"},{value:"other",label:"Other"}]},
+    {key:"access_level",type:"choice",columns:2,title:"What access do they have?",desc:"Higher access = higher risk.",options:[{value:"data_critical",label:"Critical data access",desc:"PII, financial, IP"},{value:"data_limited",label:"Limited data access"},{value:"systems",label:"System access",desc:"Production systems"},{value:"none",label:"No system access",desc:"External only"}]},
+  ];
+
   return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Supply Chain Intel" subtitle="Third-party threat mapping. Scan vendor domains for exposed ports, vulnerabilities, and dark web activity."/>
-    <Card style={{padding:24,maxWidth:600,marginBottom:16}}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Inp label="Vendor Domain *" placeholder="vendor-company.com" value={domain} onChange={e=>setDomain(e.target.value)} mono/>
-        <Inp label="Vendor Name" placeholder="Vendor Company Inc." value={name} onChange={e=>setName(e.target.value)}/>
-        <GoldBtn full onClick={scan} disabled={loading}>{loading?"Scanning...":"Scan Vendor"}</GoldBtn>
-      </div></Card>
-    {loading&&<Loader text="Conducting vendor risk assessment"/>}
-    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>VENDOR RISK ASSESSMENT</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+    {stage==="picker"&&<Card style={{padding:32,textAlign:"center"}}>
+      <div style={{fontSize:32,marginBottom:12}}>⟁</div>
+      <div style={{fontSize:20,fontFamily:serif,fontWeight:300,marginBottom:10}}>Assess a Vendor</div>
+      <p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,maxWidth:440,margin:"0 auto 24px"}}>Four questions. We scan their domain for exposed services, known breaches, dark web mentions, and compliance signals. Output: formal vendor risk score.</p>
+      <GoldBtn onClick={()=>setStage("wizard")}>Scan New Vendor</GoldBtn>
+    </Card>}
+    {stage==="wizard"&&<Wizard steps={steps} onComplete={submit} onCancel={()=>setStage("picker")} submitLabel="Scan Vendor"/>}
+    {stage==="loading"&&<Loader text="Conducting vendor risk assessment"/>}
+    {stage==="result"&&<>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setStage("picker");setResult(null);}}>← Scan Another Vendor</GoldBtn></div>
+      {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>VENDOR RISK ASSESSMENT</div>
+        <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div>
+      </Card>}
+      {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
+    </>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// FAMILY MODULE (#5)
+// FAMILY MODULE — guided flow (#5)
 // ═══════════════════════════════════════════════════════════════════
 function PgFamily(){
-  const[childName,setChildName]=useState("");const[handles,setHandles]=useState([{platform:"instagram",handle:""}]);const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
-  const addHandle=()=>setHandles([...handles,{platform:"instagram",handle:""}]);
-  const assess=async()=>{if(!childName.trim())return;setLoading(true);setResult(null);
-    try{const r=await fetch("/api/gemini/family",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({childName,handles:handles.filter(h=>h.handle.trim())})});setResult(await r.json());}catch(e){}setLoading(false);};
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Family Protection" subtitle="Child safety monitoring. NLP sentiment analysis detects cyberbullying, predatory language, and toxic interactions."/>
-    <Card style={{padding:24,maxWidth:600,marginBottom:16}}>
-      <Inp label="Child's Name" placeholder="First name" value={childName} onChange={e=>setChildName(e.target.value)}/>
-      <div style={{marginTop:16,fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>Social Accounts</div>
-      {handles.map((h,i)=><div key={i} style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:4}}>{["instagram","twitter","tiktok"].map(p=><button key={p} onClick={()=>{const n=[...handles];n[i].platform=p;setHandles(n);}} style={{padding:"4px 10px",border:`1px solid ${h.platform===p?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",background:h.platform===p?C.goldDim:"transparent",color:h.platform===p?C.gold:C.textDim,textTransform:"capitalize"}}>{p}</button>)}</div>
-        <div style={{flex:1,minWidth:150}}><Inp placeholder="@username" value={h.handle} onChange={e=>{const n=[...handles];n[i].handle=e.target.value;setHandles(n);}}/></div>
-      </div>)}
-      <button onClick={addHandle} style={{background:"none",border:"none",color:C.gold,fontSize:11,cursor:"pointer",fontFamily:mono,marginBottom:16}}>+ Add Another Account</button>
-      <GoldBtn full onClick={assess} disabled={loading}>{loading?"Analyzing...":"Run Safety Assessment"}</GoldBtn>
-      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:10}}>We analyze public-facing content only. No private messages are accessed or stored. Parents receive alert levels, not message contents.</p>
-    </Card>
-    {loading&&<Loader text="Conducting child safety assessment"/>}
-    {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>CHILD SAFETY ASSESSMENT</div><div style={{fontSize:10,fontFamily:mono,color:C.critical,marginBottom:16}}>CLASSIFICATION: RESTRICTED — PARENT ACCESS ONLY</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div></Card>}
+  const[stage,setStage]=useState("picker");const[childName,setChildName]=useState("");const[handles,setHandles]=useState([]);const[ageGroup,setAgeGroup]=useState("");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+
+  const togglePlatform=(p)=>{const exists=handles.find(h=>h.platform===p);if(exists)setHandles(handles.filter(h=>h.platform!==p));else setHandles([...handles,{platform:p,handle:""}]);};
+  const updateHandle=(p,v)=>setHandles(handles.map(h=>h.platform===p?{...h,handle:v}:h));
+
+  const assess=async()=>{if(!childName.trim()||handles.length===0)return;setLoading(true);setResult(null);setStage("loading");
+    try{const r=await fetch("/api/gemini/family",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({childName,handles:handles.filter(h=>h.handle.trim()),ageGroup})});setResult(await r.json());}catch(e){setResult({error:"Assessment failed."});}setLoading(false);setStage("result");};
+
+  const PLATFORMS=[{id:"instagram",label:"Instagram"},{id:"tiktok",label:"TikTok"},{id:"twitter",label:"X (Twitter)"},{id:"snapchat",label:"Snapchat"},{id:"discord",label:"Discord"},{id:"youtube",label:"YouTube"},{id:"roblox",label:"Roblox"}];
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Family Protection" subtitle="Public-facing safety assessment. No private messages accessed — alert levels only."/>
+
+    {stage==="picker"&&<Card style={{padding:32,textAlign:"center"}}>
+      <div style={{fontSize:32,marginBottom:12}}>⛨</div>
+      <div style={{fontSize:20,fontFamily:serif,fontWeight:300,marginBottom:10}}>Assess a Child's Online Safety</div>
+      <p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,maxWidth:460,margin:"0 auto 24px"}}>We analyze only public-facing content. No private messages are accessed or stored. You receive alert levels across categories — never message contents.</p>
+      <GoldBtn onClick={()=>setStage("setup")}>Begin Assessment</GoldBtn>
+    </Card>}
+
+    {stage==="setup"&&<Card style={{padding:28,maxWidth:620,animation:"fadeIn 0.4s ease"}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>Step 1 of 3 — Child Profile</div>
+
+      <Inp label="First name" placeholder="e.g. Emma" value={childName} onChange={e=>setChildName(e.target.value)}/>
+
+      <div style={{marginTop:16}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>Age range</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+          {[{v:"under_10",l:"Under 10"},{v:"10_12",l:"10–12"},{v:"13_15",l:"13–15"},{v:"16_17",l:"16–17"}].map(a=>
+            <div key={a.v} onClick={()=>setAgeGroup(a.v)} style={{padding:"10px 14px",border:`1px solid ${ageGroup===a.v?C.gold:C.border}`,borderRadius:3,background:ageGroup===a.v?C.goldDim:C.bgInput,cursor:"pointer",textAlign:"center",fontSize:12,color:ageGroup===a.v?C.gold:C.text,fontWeight:ageGroup===a.v?500:300}}>{a.l}</div>)}
+        </div>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:24,flexWrap:"wrap",gap:8}}>
+        <GoldBtn small onClick={()=>setStage("picker")}>← Back</GoldBtn>
+        <GoldBtn onClick={()=>setStage("platforms")} disabled={!childName.trim()||!ageGroup}>Next →</GoldBtn>
+      </div>
+    </Card>}
+
+    {stage==="platforms"&&<Card style={{padding:28,maxWidth:620,animation:"fadeIn 0.4s ease"}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Step 2 of 3 — Platforms</div>
+      <div style={{fontSize:14,color:C.textSec,fontWeight:200,marginBottom:16}}>Tap each platform {childName||"your child"} uses. Then add usernames below.</div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8,marginBottom:20}}>
+        {PLATFORMS.map(p=>{const on=handles.find(h=>h.platform===p.id);return <div key={p.id} onClick={()=>togglePlatform(p.id)} style={{padding:"12px 10px",border:`1px solid ${on?C.gold:C.border}`,borderRadius:3,background:on?C.goldDim:C.bgInput,cursor:"pointer",textAlign:"center",fontSize:11,color:on?C.gold:C.textSec,fontWeight:on?500:300,transition:"all 0.2s"}}>{on?"✓ ":""}{p.label}</div>;})}
+      </div>
+
+      {handles.length>0&&<div style={{borderTop:`1px solid ${C.border}`,paddingTop:16,marginBottom:20}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:10}}>Usernames</div>
+        {handles.map(h=><div key={h.platform} style={{display:"flex",gap:10,marginBottom:8,alignItems:"center"}}>
+          <span style={{minWidth:90,fontSize:11,fontFamily:mono,color:C.gold,letterSpacing:"1px",textTransform:"uppercase"}}>{PLATFORMS.find(p=>p.id===h.platform)?.label}</span>
+          <div style={{flex:1}}><Inp placeholder="@username" value={h.handle} onChange={e=>updateHandle(h.platform,e.target.value)} mono/></div>
+        </div>)}
+      </div>}
+
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:16,flexWrap:"wrap",gap:8}}>
+        <GoldBtn small onClick={()=>setStage("setup")}>← Back</GoldBtn>
+        <GoldBtn onClick={assess} disabled={loading||handles.length===0||!handles.some(h=>h.handle.trim())}>Run Safety Assessment</GoldBtn>
+      </div>
+    </Card>}
+
+    {stage==="loading"&&<Loader text="Conducting child safety assessment"/>}
+
+    {stage==="result"&&<>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setStage("picker");setResult(null);setChildName("");setHandles([]);setAgeGroup("");}}>← New Assessment</GoldBtn></div>
+      {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>CHILD SAFETY ASSESSMENT</div>
+        <div style={{fontSize:10,fontFamily:mono,color:C.critical,marginBottom:16}}>CLASSIFICATION: RESTRICTED — PARENT ACCESS ONLY</div>
+        <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div>
+      </Card>}
+      {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
+    </>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// MAKE ME INVISIBLE (#6)
+// MAKE ME INVISIBLE — click-based confirmation flow (#6)
 // ═══════════════════════════════════════════════════════════════════
 function PgInvisible(){
-  const[name,setName]=useState("");const[email,setEmail]=useState("");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
-  const go=async()=>{if(!name.trim())return;setLoading(true);setResult(null);
-    try{const r=await fetch("/api/gemini/suppression",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,action:"mass_optout"})});setResult(await r.json());}catch(e){}setLoading(false);};
+  const[stage,setStage]=useState("picker");const[name,setName]=useState("");const[email,setEmail]=useState("");const[scope,setScope]=useState("");const[jurisdiction,setJurisdiction]=useState("");const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
+
+  const go=async()=>{setLoading(true);setResult(null);setStage("loading");
+    try{const r=await fetch("/api/gemini/suppression",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,action:"mass_optout",scope,jurisdiction})});setResult(await r.json());}catch(e){setResult({error:"Request failed."});}setLoading(false);setStage("result");};
+
   return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Data Suppression" subtitle="Remove your presence from data brokers, people search engines, and public databases."/>
-    <Card style={{padding:32,maxWidth:560,textAlign:"center",marginBottom:24}}>
-      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:16}}>Absolute Suppression</div>
-      <Inp label="Full Legal Name" placeholder="John Michael Smith" value={name} onChange={e=>setName(e.target.value)}/>
-      <div style={{marginTop:12}}><Inp label="Primary Email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} mono/></div>
-      <div style={{marginTop:24}}>
-        <button onClick={go} disabled={loading} style={{width:"100%",padding:"20px 32px",border:`2px solid ${C.gold}`,borderRadius:4,background:C.goldDim,color:C.gold,fontSize:14,fontFamily:serif,fontWeight:400,letterSpacing:"1px",cursor:loading?"default":"pointer",transition:"all 0.3s",opacity:loading?.5:1}}>{loading?"Processing suppression...":"MAKE ME INVISIBLE"}</button>
+
+    {stage==="picker"&&<>
+      <Card style={{padding:40,textAlign:"center",marginBottom:20,maxWidth:600,margin:"0 auto 20px"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.gold,textTransform:"uppercase",marginBottom:16}}>Absolute Suppression Protocol</div>
+        <div style={{fontSize:24,fontFamily:serif,fontWeight:300,marginBottom:14}}>Make Me Invisible</div>
+        <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:8}}>Automated opt-out requests across 15+ major data brokers. GDPR deletion and CCPA opt-out templates included.</p>
+        <p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:28}}>Whitepages — Spokeo — BeenVerified — Intelius — Radaris — TruePeopleSearch — Experian — Acxiom — LexisNexis — 7 more</p>
+        <button onClick={()=>setStage("setup")} style={{width:"100%",padding:"20px 32px",border:`2px solid ${C.gold}`,borderRadius:4,background:C.goldDim,color:C.gold,fontSize:15,fontFamily:serif,fontWeight:400,letterSpacing:"2px",cursor:"pointer",transition:"all 0.3s",textTransform:"uppercase"}}>Begin Suppression</button>
+      </Card>
+    </>}
+
+    {stage==="setup"&&<Card style={{padding:28,maxWidth:600,animation:"fadeIn 0.4s ease"}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>Identity Confirmation</div>
+      <Inp label="Full legal name" placeholder="John Michael Smith" value={name} onChange={e=>setName(e.target.value)}/>
+      <div style={{marginTop:12}}><Inp label="Primary email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)} mono/></div>
+
+      <div style={{marginTop:18}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>Scope of suppression</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>
+          {[{v:"full",l:"Full suppression",d:"Remove all listings across all brokers (recommended)"},{v:"name_only",l:"Name-based only",d:"Target listings tied to your name"},{v:"contact_only",l:"Contact info only",d:"Remove only phone/email listings"}].map(o=>
+            <div key={o.v} onClick={()=>setScope(o.v)} style={{padding:"12px 14px",border:`1px solid ${scope===o.v?C.gold:C.border}`,borderRadius:3,background:scope===o.v?C.goldDim:C.bgInput,cursor:"pointer"}}>
+              <div style={{fontSize:12,fontWeight:scope===o.v?500:400,color:scope===o.v?C.gold:C.text}}>{o.l}</div>
+              <div style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:2}}>{o.d}</div>
+            </div>)}
+        </div>
       </div>
-      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:14,lineHeight:1.5}}>Generates automated opt-out requests for 15+ data brokers including Whitepages, Spokeo, Experian, BeenVerified, Radaris, and more. Includes GDPR and CCPA deletion request templates.</p>
-    </Card>
-    {loading&&<Loader text="Generating suppression requests across 15+ brokers"/>}
-    {result?.guide&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>SUPPRESSION PLAYBOOK</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:6}}>Brokers targeted: {result.brokers?.length || 15}</div><div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.guide}</div></Card>}
+
+      <div style={{marginTop:16}}>
+        <Dropdown label="Primary jurisdiction" value={jurisdiction} onChange={setJurisdiction} options={[{value:"us",label:"United States",desc:"CCPA + state laws"},{value:"eu",label:"European Union",desc:"GDPR"},{value:"uk",label:"United Kingdom",desc:"UK GDPR"},{value:"ca",label:"Canada",desc:"PIPEDA"},{value:"other",label:"Other / International"}]} placeholder="Select jurisdiction"/>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:24,flexWrap:"wrap",gap:8}}>
+        <GoldBtn small onClick={()=>setStage("picker")}>← Back</GoldBtn>
+        <button onClick={go} disabled={!name.trim()||!scope||!jurisdiction} style={{padding:"14px 32px",border:`2px solid ${name.trim()&&scope&&jurisdiction?C.gold:C.border}`,borderRadius:4,background:name.trim()&&scope&&jurisdiction?C.goldDim:"transparent",color:name.trim()&&scope&&jurisdiction?C.gold:C.textDim,fontSize:12,fontFamily:mono,fontWeight:500,letterSpacing:"2px",cursor:name.trim()&&scope&&jurisdiction?"pointer":"default",textTransform:"uppercase"}}>MAKE ME INVISIBLE</button>
+      </div>
+    </Card>}
+
+    {stage==="loading"&&<Loader text="Generating suppression requests across 15+ brokers"/>}
+
+    {stage==="result"&&<>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>setStage("picker")}>← Start Over</GoldBtn></div>
+      {result?.guide&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>SUPPRESSION PLAYBOOK</div>
+        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:6}}>Brokers targeted: {result.brokers?.length||15}</div>
+        <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.guide}</div>
+      </Card>}
+      {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
+    </>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// HONEYTOKENS / DECEPTION (#12)
+// HONEYTOKENS / DECEPTION — structured click-based flow (#12)
 // ═══════════════════════════════════════════════════════════════════
 function PgHoneytokens(){
-  const[tab,setTab]=useState("generate");const[docName,setDocName]=useState("");const[recipients,setRecipients]=useState("");const[tokenType,setTokenType]=useState("document");
+  const[tab,setTab]=useState("generate");const[docName,setDocName]=useState("");const[recipients,setRecipients]=useState([]);const[newRecipient,setNewRecipient]=useState("");const[tokenType,setTokenType]=useState("document");
   const[tokens,setTokens]=useState([]);const[allTokens,setAllTokens]=useState([]);const[loading,setLoading]=useState(false);
-  const generate=async()=>{if(!docName.trim()||!recipients.trim())return;setLoading(true);
-    const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"generate",documentName:docName,recipients:recipients.split("\n").filter(r=>r.trim()),tokenType})});
+
+  const addRecipient=()=>{if(newRecipient.trim()){setRecipients([...recipients,newRecipient.trim()]);setNewRecipient("");}};
+  const removeRecipient=(i)=>setRecipients(recipients.filter((_,j)=>j!==i));
+
+  const generate=async()=>{if(!docName.trim()||recipients.length===0)return;setLoading(true);
+    const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"generate",documentName:docName,recipients,tokenType})});
     const d=await r.json();setTokens(d.tokens||[]);setLoading(false);};
   const loadAll=async()=>{try{const r=await fetch("/api/gemini/honeytokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"list"})});const d=await r.json();setAllTokens(Array.isArray(d)?d:[]);}catch(e){setAllTokens([]);}};
   useEffect(()=>{loadAll();},[]);
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Deception Technology" subtitle="Generate honey-tokens — trackable fake documents and credentials. If leaked, trace the exact source instantly."/>
-    <TabBar tabs={[["generate","Generate Tokens"],["monitor","Monitor Tokens"]]} active={tab} onChange={setTab}/>
-    {tab==="generate"&&<Card style={{padding:24,maxWidth:600}}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Inp label="Document / Asset Name" placeholder="Q4 Strategy Report, API Key, Client List" value={docName} onChange={e=>setDocName(e.target.value)}/>
-        <div><div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:6}}>Token Type</div>
-          <div style={{display:"flex",gap:6}}>{["document","credential","url","canary"].map(t=><button key={t} onClick={()=>setTokenType(t)} style={{padding:"5px 12px",border:`1px solid ${tokenType===t?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",background:tokenType===t?C.goldDim:"transparent",color:tokenType===t?C.gold:C.textDim,textTransform:"capitalize"}}>{t}</button>)}</div></div>
-        <Inp label="Recipients (one per line)" placeholder={"John Smith — Board Member\nJane Doe — CFO\nVendor Corp — Subcontractor"} value={recipients} onChange={e=>setRecipients(e.target.value)} area/>
-        <GoldBtn full onClick={generate} disabled={loading}>{loading?"Generating...":"Generate Honey-Tokens"}</GoldBtn>
+
+  const TOKEN_TYPES=[
+    {value:"document",label:"Document token",desc:"Embed in a fake sensitive document"},
+    {value:"credential",label:"Credential token",desc:"Fake login credentials that alert on use"},
+    {value:"url",label:"URL token",desc:"Trackable link embedded in communications"},
+    {value:"canary",label:"Canary token",desc:"Generic trackable asset"},
+  ];
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Deception Technology" subtitle="Generate honey-tokens. If leaked, trace the exact source."/>
+    <TabBar tabs={[["generate","Generate Tokens"],["monitor","Monitor Tokens ("+allTokens.length+")"]]} active={tab} onChange={setTab}/>
+
+    {tab==="generate"&&<Card style={{padding:28,maxWidth:640}}>
+      <div style={{display:"flex",flexDirection:"column",gap:18}}>
+        <Inp label="What's the asset called?" placeholder="Q4 Strategy Report" value={docName} onChange={e=>setDocName(e.target.value)}/>
+
+        <Dropdown label="Token type" value={tokenType} onChange={setTokenType} options={TOKEN_TYPES}/>
+
+        <div>
+          <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>Recipients ({recipients.length})</div>
+          <p style={{fontSize:11,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:10}}>Each recipient receives a uniquely tagged copy. If the asset surfaces on the dark web, the token identifies who leaked it.</p>
+
+          {recipients.length>0&&<div style={{marginBottom:10,display:"flex",flexWrap:"wrap",gap:6}}>
+            {recipients.map((r,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 6px 4px 12px",background:C.goldDim,border:`1px solid ${C.gold}40`,borderRadius:3,fontSize:11,color:C.gold}}>
+              <span>{r}</span>
+              <button onClick={()=>removeRecipient(i)} style={{background:"none",border:"none",color:C.textDim,cursor:"pointer",fontSize:12,padding:"0 4px",lineHeight:1}}>×</button>
+            </div>)}
+          </div>}
+
+          <div style={{display:"flex",gap:8}}>
+            <div style={{flex:1}}><Inp placeholder="John Smith — Board Member" value={newRecipient} onChange={e=>setNewRecipient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRecipient()}/></div>
+            <GoldBtn small onClick={addRecipient} disabled={!newRecipient.trim()}>+ Add</GoldBtn>
+          </div>
+        </div>
+
+        <GoldBtn full onClick={generate} disabled={loading||!docName.trim()||recipients.length===0}>{loading?"Generating...":`Generate ${recipients.length||0} Tokens`}</GoldBtn>
       </div>
-      {tokens.length>0&&<div style={{marginTop:20}}><div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:10}}>Generated Tokens</div>
-        {tokens.map((t,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
+
+      {tokens.length>0&&<div style={{marginTop:24,paddingTop:20,borderTop:`1px solid ${C.border}`}}>
+        <div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:12}}>Generated Tokens</div>
+        {tokens.map((t,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
           <span style={{fontSize:12}}>{t.recipient}</span>
           <span style={{fontFamily:mono,fontSize:10,color:C.gold,padding:"4px 10px",background:C.goldDim,borderRadius:3}}>{t.token_id}</span>
         </div>)}
-        <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:10}}>Embed each token into the recipient's copy. If the document surfaces on dark web or unauthorized channels, the token identifies the leak source.</p>
+        <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:14,lineHeight:1.5}}>Embed each token into the recipient's copy. If the document surfaces on dark web or unauthorized channels, the token identifies the leak source.</p>
       </div>}
     </Card>}
+
     {tab==="monitor"&&<Card style={{padding:20}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase"}}>Active Tokens ({allTokens.length})</span><GoldBtn small onClick={loadAll}>Refresh</GoldBtn></div>
-      {allTokens.length===0&&<div style={{fontSize:12,color:C.textDim,fontWeight:200}}>No tokens generated yet.</div>}
-      {allTokens.map((t,i)=><div key={t.id||i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <span style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase"}}>Active Tokens ({allTokens.length})</span>
+        <GoldBtn small onClick={loadAll}>Refresh</GoldBtn>
+      </div>
+      {allTokens.length===0&&<div style={{fontSize:12,color:C.textDim,fontWeight:200,padding:"20px 0",textAlign:"center"}}>No tokens generated yet. Go to the Generate tab to create your first tokens.</div>}
+      {allTokens.map((t,i)=><div key={t.id||i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
         <div><div style={{fontSize:12}}>{t.document_name} → {t.recipient}</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim}}>{t.token_id} — {t.token_type}</div></div>
         <Badge severity={t.triggered?"critical":"low"} label={t.triggered?"TRIGGERED":"CLEAN"}/>
       </div>)}
@@ -761,31 +1059,44 @@ function PgHoneytokens(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SEAT MANAGEMENT (#3)
+// SEAT MANAGEMENT — click-based with Dropdown (#3)
 // ═══════════════════════════════════════════════════════════════════
 function PgSeats(){
   const[seats,setSeats]=useState([]);const[newEmail,setNewEmail]=useState("");const[newRole,setNewRole]=useState("member");const[loading,setLoading]=useState(false);
-  const load=async()=>{const r=await fetch("/api/seats");setSeats(await r.json());};
+  const load=async()=>{try{const r=await fetch("/api/seats");const d=await r.json();setSeats(Array.isArray(d)?d:[]);}catch(e){setSeats([]);}};
   useEffect(()=>{load();},[]);
   const invite=async()=>{if(!newEmail.trim())return;setLoading(true);
     await fetch("/api/seats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"invite",email:newEmail,role:newRole})});
     setNewEmail("");load();setLoading(false);};
   const remove=async(email)=>{await fetch("/api/seats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"remove",email})});load();};
   const activeSeats=seats.filter(s=>s.status!=="removed");
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Team Seats" subtitle="Manage sub-users for your organization. $15 per additional seat/month."/>
+
+  const ROLES=[
+    {value:"member",label:"Member",desc:"Full access to intelligence modules"},
+    {value:"admin",label:"Admin",desc:"Can manage team & assessments"},
+  ];
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Team Seats" subtitle="Manage sub-users. $15 per additional seat per month, billed to the Master Account."/>
     <Card style={{padding:24,marginBottom:16}}>
       <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:12}}>Invite Team Member</div>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
-        {["member","admin"].map(r=><button key={r} onClick={()=>setNewRole(r)} style={{padding:"5px 12px",border:`1px solid ${newRole===r?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",background:newRole===r?C.goldDim:"transparent",color:newRole===r?C.gold:C.textDim,textTransform:"capitalize"}}>{r}</button>)}
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 200px",gap:10,marginBottom:10}} className="sg2">
+        <Inp label="Email address" placeholder="employee@company.com" value={newEmail} onChange={e=>setNewEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&invite()} mono/>
+        <Dropdown label="Role" value={newRole} onChange={setNewRole} options={ROLES}/>
       </div>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><div style={{flex:1,minWidth:200}}><Inp placeholder="employee@company.com" value={newEmail} onChange={e=>setNewEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&invite()}/></div><GoldBtn small onClick={invite} disabled={loading}>Invite</GoldBtn></div>
-      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:8}}>Each additional seat is $15/month, billed to the Master Account. New members receive an invitation email.</p>
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:14,flexWrap:"wrap",gap:10}}>
+        <p style={{fontSize:11,color:C.textDim,fontWeight:200,margin:0,flex:1,minWidth:200}}>New members receive an invitation email and get access once they accept.</p>
+        <GoldBtn onClick={invite} disabled={loading||!newEmail.trim()}>{loading?"Inviting...":"Send Invitation"}</GoldBtn>
+      </div>
     </Card>
+
     <Card style={{padding:20}}>
       <div style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:12}}>Team Members ({activeSeats.length})</div>
-      {activeSeats.map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
+      {activeSeats.length===0&&<div style={{fontSize:12,color:C.textDim,fontWeight:200,padding:"12px 0"}}>No team members yet.</div>}
+      {activeSeats.map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:i>0?`1px solid ${C.border}`:"none",flexWrap:"wrap",gap:8}}>
         <div><div style={{fontSize:12}}>{s.email}</div><div style={{fontSize:10,color:C.textDim,fontFamily:mono}}>{s.role} — {s.status}</div></div>
-        <div style={{display:"flex",gap:6}}><Badge severity={s.status==="active"?"low":"info"} label={s.status}/><GoldBtn small danger onClick={()=>remove(s.email)}>Remove</GoldBtn></div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}><Badge severity={s.status==="active"?"low":"info"} label={s.status}/><GoldBtn small danger onClick={()=>remove(s.email)}>Remove</GoldBtn></div>
       </div>)}
     </Card>
   </div>;
@@ -988,15 +1299,15 @@ function PgCPIR(){
 
 
 const NAV=[
-  {group:"Operations",items:[{id:"dash",label:"Command Center"},{id:"brief",label:"Daily Brief"},{id:"warroom",label:"War Room"},{id:"intel",label:"Intelligence Feed"},{id:"map",label:"Situation Map"},{id:"travel",label:"Travel Security"}]},
-  {group:"Investigation",items:[{id:"osint",label:"OSINT Search"},{id:"linkmap",label:"Link Analysis"},{id:"identity",label:"Identity Verification"},{id:"fraud",label:"Fraud Detection"},{id:"breaches",label:"Breach Console"},{id:"darkweb",label:"Dark Web Intel"}]},
-  {group:"Monitoring",items:[{id:"footprint",label:"Digital Footprint"},{id:"social",label:"Social Monitoring"},{id:"imagescan",label:"Image Security"},{id:"geospatial",label:"Geospatial Intel"},{id:"ipscan",label:"Connection Security"},{id:"supplychain",label:"Supply Chain"}]},
-  {group:"Protection",items:[{id:"invisible",label:"Make Me Invisible"},{id:"docintel",label:"Document Intel"},{id:"decoy",label:"Decoy Deployment"},{id:"honeytokens",label:"Deception Tech"},{id:"execprot",label:"Executive Protection"},{id:"evidence",label:"Evidence Chain"}]},
-  {group:"Threat Analysis",items:[{id:"predict",label:"Threat Prediction"},{id:"predictive",label:"Predictive Forecast"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"},{id:"cases",label:"Case Management"}]},
-  {group:"Family & Team",items:[{id:"family",label:"Family Protection"},{id:"seats",label:"Team Seats"}]},
-  {group:"Personal",items:[{id:"notes",label:"Notes"},{id:"reports",label:"Reports Center"}]},
-  {group:"Services",items:[{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
-  {group:"System",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"}]},
+  {group:"Operations",gk:"operations",items:[{id:"dash",label:"Command Center"},{id:"brief",label:"Daily Brief"},{id:"warroom",label:"War Room"},{id:"intel",label:"Intelligence Feed"},{id:"map",label:"Situation Map"},{id:"travel",label:"Travel Security"}]},
+  {group:"Investigation",gk:"investigation",items:[{id:"osint",label:"OSINT Search"},{id:"linkmap",label:"Link Analysis"},{id:"identity",label:"Identity Verification"},{id:"fraud",label:"Fraud Detection"},{id:"breaches",label:"Breach Console"},{id:"darkweb",label:"Dark Web Intel"}]},
+  {group:"Monitoring",gk:"monitoring",items:[{id:"footprint",label:"Digital Footprint"},{id:"social",label:"Social Monitoring"},{id:"imagescan",label:"Image Security"},{id:"geospatial",label:"Geospatial Intel"},{id:"ipscan",label:"Connection Security"},{id:"supplychain",label:"Supply Chain"}]},
+  {group:"Protection",gk:"protection",items:[{id:"invisible",label:"Make Me Invisible"},{id:"docintel",label:"Document Intel"},{id:"decoy",label:"Decoy Deployment"},{id:"honeytokens",label:"Deception Tech"},{id:"execprot",label:"Executive Protection"},{id:"evidence",label:"Evidence Chain"}]},
+  {group:"Threat Analysis",gk:"threatAnalysis",items:[{id:"predict",label:"Threat Prediction"},{id:"predictive",label:"Predictive Forecast"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"},{id:"cases",label:"Case Management"}]},
+  {group:"Family & Team",gk:"familyTeam",items:[{id:"family",label:"Family Protection"},{id:"seats",label:"Team Seats"}]},
+  {group:"Personal",gk:"personal",items:[{id:"notes",label:"Notes"},{id:"reports",label:"Reports Center"}]},
+  {group:"Services",gk:"services",items:[{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
+  {group:"System",gk:"system",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"}]},
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1039,6 +1350,7 @@ export default function SpyDashboard({user,isDemo}){
 
   // Language
   useEffect(()=>{setLangState(getLang());const h=()=>setLangState(getLang());window.addEventListener("langchange",h);return()=>window.removeEventListener("langchange",h);},[]);
+  useEffect(()=>{if(typeof document!=="undefined")document.documentElement.lang=lang;},[lang]);
   const tr=(k)=>T(k,lang);
 
   const handleSignOut=async()=>{if(isDemo){router.push("/");return;}const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.auth.signOut();router.push("/");router.refresh();};
@@ -1078,21 +1390,60 @@ export default function SpyDashboard({user,isDemo}){
     case"honeytokens":return <PgHoneytokens/>;
     case"seats":return <PgSeats/>;
     case"ipscan":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Connection Security" subtitle="Real-time analysis of your current network connection."/><IPScanWidget/></div>;
-    case"footprint":return <PgAnalysis module="footprint" title="Digital Footprint" subtitle="Complete exposure analysis." fields={[{key:"query",label:"Target",placeholder:"target@domain.com",mono:true},{key:"type",label:"Type",placeholder:"email / name / username / phone"},{key:"context",label:"Context",placeholder:"Known associations, concerns...",area:true}]}/>;
-    case"docintel":return <PgAnalysis module="docintel" title="Document Intelligence" subtitle="Fuzzy-hash leak detection." fields={[{key:"query",label:"Document",placeholder:"Title, hash, or description"},{key:"context",label:"Distribution",placeholder:"Recipients, classification...",area:true}]}/>;
-    case"execprot":return <PgAnalysis module="execprot" title="Executive Protection" subtitle="Exposure assessment." fields={[{key:"query",label:"Individual",placeholder:"Full name"},{key:"context",label:"Context",placeholder:"Role, threats, travel...",area:true}]}/>;
-    case"predict":return <PgAnalysis module="threat" title="Threat Prediction" subtitle="Pattern-of-life analysis." fields={[{key:"query",label:"Subject",placeholder:"Describe scenario"},{key:"context",label:"Pattern of Life",placeholder:"Routines, habits...",area:true}]}/>;
-    case"insider":return <PgAnalysis module="threat" title="Insider Threats" subtitle="Behavioral risk assessment." fields={[{key:"query",label:"Subject",placeholder:"Individual or department"},{key:"context",label:"Indicators",placeholder:"Changes, access patterns...",area:true}]}/>;
+    case"footprint":return <PgAnalysis module="footprint" title="Digital Footprint" subtitle="Complete exposure analysis across public data sources."
+      targetLabel="Who should we investigate?"
+      typeOptions={[{value:"email",label:"Email address",desc:"Trace an email across platforms, breaches, public records"},{value:"name",label:"Full name",desc:"Name-based exposure assessment"},{value:"username",label:"Username / handle",desc:"Enumerate the user across all major platforms"},{value:"phone",label:"Phone number",desc:"Carrier, location, associated accounts"}]}
+      contextOptions={[{value:"personal_security",label:"Personal security audit",desc:"What would an attacker find about me?"},{value:"pre_employment",label:"Pre-employment due diligence",desc:"Vetting a candidate or applicant"},{value:"competitive",label:"Competitive intelligence",desc:"What's publicly known about this person"},{value:"relationship",label:"Personal relationship",desc:"Verifying someone new"}]}/>;
+    case"docintel":return <PgAnalysis module="docintel" title="Document Intelligence" subtitle="Leak detection and metadata analysis."
+      targetLabel="What document are you analyzing?"
+      typeOptions={[{value:"internal_memo",label:"Internal memo or report",desc:"Confidential internal document"},{value:"contract",label:"Contract or legal document"},{value:"financial",label:"Financial document",desc:"Earnings, budgets, forecasts"},{value:"technical",label:"Technical specification",desc:"Product specs, architecture"},{value:"correspondence",label:"Correspondence",desc:"Email, letter, message thread"}]}
+      contextOptions={[{value:"suspected_leak",label:"Suspected leak investigation"},{value:"distribution_audit",label:"Distribution audit"},{value:"classification_review",label:"Classification review"},{value:"forensic_prep",label:"Forensic preparation"}]}/>;
+    case"execprot":return <PgAnalysis module="execprot" title="Executive Protection" subtitle="Exposure assessment for principals and high-value individuals."
+      targetLabel="Who is being protected?"
+      typeOptions={[{value:"ceo",label:"CEO / C-suite",desc:"Chief executive exposure"},{value:"board",label:"Board member"},{value:"hnw",label:"High net worth individual"},{value:"family",label:"Principal's family member"},{value:"other",label:"Other public figure"}]}
+      contextOptions={[{value:"routine_audit",label:"Routine exposure audit"},{value:"pre_travel",label:"Pre-travel hardening"},{value:"active_threat",label:"Active threat response"},{value:"post_incident",label:"Post-incident review"}]}/>;
+    case"predict":return <PgAnalysis module="threat" title="Threat Prediction" subtitle="Pattern-of-life analysis and threat forecasting."
+      targetLabel="What scenario are we modeling?"
+      typeOptions={[{value:"individual",label:"Individual target"},{value:"facility",label:"Physical facility"},{value:"organization",label:"Organization"},{value:"event",label:"Event or gathering"}]}
+      contextOptions={[{value:"physical_threat",label:"Physical threat"},{value:"cyber_threat",label:"Cyber threat"},{value:"reputational",label:"Reputational threat"},{value:"financial_threat",label:"Financial threat"}]}/>;
+    case"insider":return <PgAnalysis module="threat" title="Insider Threats" subtitle="Behavioral risk assessment for personnel."
+      targetLabel="Subject of concern"
+      typeOptions={[{value:"individual",label:"Specific individual"},{value:"role",label:"A specific role / position"},{value:"department",label:"Department or team"}]}
+      contextOptions={[{value:"behavior_change",label:"Observed behavior change"},{value:"access_pattern",label:"Unusual access pattern"},{value:"grievance",label:"Known grievance"},{value:"external_contact",label:"Suspicious external contact"},{value:"pre_termination",label:"Pre-termination review"}]}/>;
+    case"linkmap":return <PgAnalysis module="linkmap" title="Link Analysis" subtitle="Entity relationship mapping across public sources." apiRoute="/api/gemini/linkmap" bodyKey="entity"
+      targetLabel="Which entity should we map?"
+      typeOptions={[{value:"person",label:"Person",desc:"Individual's network"},{value:"company",label:"Company",desc:"Corporate relationships"},{value:"domain",label:"Domain",desc:"Technical & ownership links"},{value:"email",label:"Email address"},{value:"ip",label:"IP address"}]}
+      contextOptions={[{value:"due_diligence",label:"Due diligence"},{value:"investigation",label:"Active investigation"},{value:"competitive",label:"Competitive mapping"},{value:"fraud",label:"Fraud network tracing"}]}/>;
+    case"darkweb":return <PgAnalysis module="darkweb" title="Dark Web Intelligence" subtitle="Underground forums, marketplaces, paste sites, ransomware groups." apiRoute="/api/gemini/darkweb" bodyKey="query"
+      targetLabel="What are we searching for?"
+      typeOptions={[{value:"email",label:"Email / credentials"},{value:"domain",label:"Company domain"},{value:"company",label:"Company name"},{value:"person",label:"Individual's name"},{value:"keyword",label:"Specific keyword or phrase"}]}
+      contextOptions={[{value:"breach_check",label:"Breach exposure check"},{value:"ransomware",label:"Ransomware targeting"},{value:"credential_monitoring",label:"Credential leak monitoring"},{value:"competitor",label:"Competitor mention tracking"}]}/>;
+    case"identity":return <PgAnalysis module="identity" title="Identity Verification" subtitle="Cross-reference against public records for authenticity scoring." apiRoute="/api/gemini/identity" bodyKey="name"
+      targetLabel="Whose identity are we verifying?"
+      typeOptions={[{value:"executive",label:"Executive / C-suite"},{value:"candidate",label:"Job candidate"},{value:"vendor",label:"Vendor or contractor"},{value:"client",label:"New client or partner"},{value:"other",label:"Other individual"}]}
+      contextOptions={[{value:"employment",label:"Employment verification"},{value:"kyc",label:"KYC / onboarding"},{value:"fraud_check",label:"Fraud check"},{value:"board_appointment",label:"Board or committee appointment"}]}/>;
+    case"fraud":return <PgAnalysis module="fraud" title="Fraud Detection" subtitle="Risk assessment — financial, identity, BEC, corporate." apiRoute="/api/gemini/fraud" bodyKey="entity"
+      targetLabel="Who or what are we assessing?"
+      typeOptions={[{value:"person",label:"Individual"},{value:"company",label:"Company"},{value:"email",label:"Email address",desc:"Phishing / BEC check"},{value:"domain",label:"Domain",desc:"Typosquatting / impersonation"}]}
+      contextOptions={[{value:"bec",label:"Business email compromise"},{value:"payment_fraud",label:"Payment fraud suspected"},{value:"impersonation",label:"Impersonation attempt"},{value:"pre_transaction",label:"Pre-transaction due diligence"}]}/>;
+    case"geospatial":return <PgAnalysis module="geospatial" title="Geospatial Intelligence" subtitle="Location-based threat and physical security assessment." apiRoute="/api/gemini/geospatial" bodyKey="location"
+      targetLabel="Which location?"
+      typeOptions={[{value:"city",label:"City or metro area"},{value:"address",label:"Specific address"},{value:"region",label:"Region or country"},{value:"facility",label:"Facility or venue"}]}
+      contextOptions={[{value:"business_travel",label:"Business travel"},{value:"relocation",label:"Relocation assessment"},{value:"event_security",label:"Event security"},{value:"facility_siting",label:"Facility siting"}]}/>;
+    case"predictive":return <PgAnalysis module="predictive" title="Predictive Forecast" subtitle="30/60/90-day threat horizon analysis." apiRoute="/api/gemini/predict" bodyKey="sector"
+      targetLabel="Which sector or industry?"
+      typeOptions={[{value:"financial",label:"Financial Services"},{value:"tech",label:"Technology"},{value:"energy",label:"Energy"},{value:"healthcare",label:"Healthcare"},{value:"defense",label:"Defense / Aerospace"},{value:"retail",label:"Retail / Consumer"},{value:"government",label:"Government / Public Sector"},{value:"other",label:"Other sector"}]}
+      contextOptions={[{value:"strategic_planning",label:"Strategic planning"},{value:"risk_committee",label:"Risk committee briefing"},{value:"investment",label:"Investment decision"},{value:"expansion",label:"Geographic expansion"}]}/>;
+    case"evidence":return <PgAnalysis module="evidence" title="Evidence Chain" subtitle="Forensic-grade documentation and chain-of-custody guidance." apiRoute="/api/gemini/evidence" bodyKey="caseDescription"
+      targetLabel="What needs to be documented?"
+      typeOptions={[{value:"digital_incident",label:"Digital incident",desc:"Breach, intrusion, data theft"},{value:"ip_theft",label:"IP / trade secret theft"},{value:"harassment",label:"Harassment or stalking"},{value:"fraud",label:"Fraud case"},{value:"misconduct",label:"Employee misconduct"}]}
+      contextOptions={[{value:"civil",label:"Civil litigation prep"},{value:"criminal_referral",label:"Criminal referral"},{value:"internal",label:"Internal investigation"},{value:"regulatory",label:"Regulatory filing"}]}/>;
+    case"cases":return <PgAnalysis module="cases" title="Case Management" subtitle="Investigative analysis, planning, and resolution guidance." apiRoute="/api/cases" bodyKey="caseData"
+      targetLabel="Case subject or title"
+      typeOptions={[{value:"investigation",label:"Active investigation"},{value:"due_diligence",label:"Due diligence"},{value:"incident",label:"Security incident"},{value:"review",label:"Retrospective review"}]}
+      contextOptions={[{value:"opening",label:"Opening a new case"},{value:"mid_investigation",label:"Mid-investigation checkpoint"},{value:"closure",label:"Closure & recommendations"}]}/>;
     case"cpir":return <PgCPIR/>;
     case"notes":return <PgNotes/>;
-    case"linkmap":return <PgAnalysis module="linkmap" title="Link Analysis" subtitle="Entity relationship mapping." fields={[{key:"query",label:"Entity",placeholder:"Name, company, domain",mono:true},{key:"type",label:"Type",placeholder:"person / company / domain"},{key:"context",label:"Known Links",placeholder:"Associations, ties...",area:true}]} apiRoute="/api/gemini/linkmap" bodyKey="entity"/>;
-    case"darkweb":return <PgAnalysis module="darkweb" title="Dark Web Intelligence" subtitle="Underground monitoring." fields={[{key:"query",label:"Target",placeholder:"Email, domain, company",mono:true},{key:"type",label:"Type",placeholder:"email / domain / company"},{key:"context",label:"Context",placeholder:"Threat actors, incidents...",area:true}]} apiRoute="/api/gemini/darkweb" bodyKey="query"/>;
-    case"identity":return <PgAnalysis module="identity" title="Identity Verification" subtitle="Authenticity scoring." fields={[{key:"query",label:"Full Name",placeholder:"First Last"},{key:"context",label:"Data",placeholder:"Email, company, credentials...",area:true}]} apiRoute="/api/gemini/identity" bodyKey="name"/>;
-    case"fraud":return <PgAnalysis module="fraud" title="Fraud Detection" subtitle="Risk assessment." fields={[{key:"query",label:"Entity",placeholder:"Person, company, email",mono:true},{key:"type",label:"Type",placeholder:"person / company / domain"},{key:"context",label:"Indicators",placeholder:"Suspicious activity...",area:true}]} apiRoute="/api/gemini/fraud" bodyKey="entity"/>;
-    case"geospatial":return <PgAnalysis module="geospatial" title="Geospatial Intelligence" subtitle="Location threat assessment." fields={[{key:"query",label:"Location",placeholder:"City, address, coordinates"},{key:"context",label:"Context",placeholder:"Purpose, duration, concerns...",area:true}]} apiRoute="/api/gemini/geospatial" bodyKey="location"/>;
-    case"predictive":return <PgAnalysis module="predictive" title="Predictive Forecast" subtitle="30/60/90-day threat horizon." fields={[{key:"query",label:"Sector",placeholder:"e.g. Finance, Technology"},{key:"context",label:"Assets",placeholder:"Specific assets, exposure...",area:true}]} apiRoute="/api/gemini/predict" bodyKey="sector"/>;
-    case"evidence":return <PgAnalysis module="evidence" title="Evidence Chain" subtitle="Forensic documentation." fields={[{key:"query",label:"Case",placeholder:"Describe the incident",area:true}]} apiRoute="/api/gemini/evidence" bodyKey="caseDescription"/>;
-    case"cases":return <PgAnalysis module="cases" title="Case Management" subtitle="Investigative analysis." fields={[{key:"query",label:"Case Details",placeholder:"Subject, findings, timeline...",area:true}]} apiRoute="/api/cases" bodyKey="caseData"/>;
     case"suppress":return <PgInvisible/>;
     case"capabilities":return <PgCapabilities/>;
     case"membership":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Membership" subtitle="Start your 7-day free trial. Full access. Cancel anytime."/>
@@ -1141,38 +1492,36 @@ export default function SpyDashboard({user,isDemo}){
         <div style={{padding:collapsed?"16px 8px":"16px 16px",borderBottom:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>navClick("dash")} title="Home">
           {collapsed?<span style={{fontSize:14,fontFamily:serif,color:C.gold,letterSpacing:"2px",textAlign:"center",display:"block"}}>S</span>:<SpyLogo/>}
         </div>
-        {!collapsed&&<button onClick={()=>setCollapsed(true)} style={{padding:"4px 16px",border:"none",background:"transparent",color:C.textDim,fontSize:9,fontFamily:mono,letterSpacing:"1px",cursor:"pointer",textAlign:"left",borderBottom:`1px solid ${C.border}`}}>COLLAPSE</button>}
-        {collapsed&&<button onClick={()=>setCollapsed(false)} style={{padding:"4px",border:"none",background:"transparent",color:C.textDim,fontSize:11,cursor:"pointer",borderBottom:`1px solid ${C.border}`}}>›</button>}
+        {!collapsed&&<button onClick={()=>setCollapsed(true)} title="Collapse sidebar" style={{padding:"6px 16px",border:"none",background:"transparent",color:C.textDim,fontSize:10,fontFamily:mono,letterSpacing:"1.5px",cursor:"pointer",textAlign:"left",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=C.gold} onMouseLeave={e=>e.currentTarget.style.color=C.textDim}>‹  COLLAPSE</button>}
+        {collapsed&&<button onClick={()=>setCollapsed(false)} title="Expand sidebar" style={{padding:"6px",border:"none",background:"transparent",color:C.textDim,fontSize:12,cursor:"pointer",borderBottom:`1px solid ${C.border}`,transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=C.gold} onMouseLeave={e=>e.currentTarget.style.color=C.textDim}>›</button>}
         <nav style={{flex:1,overflowY:"auto",padding:"6px 5px"}}>
           {NAV.map(g=><div key={g.group} style={{marginBottom:3}}>
-            {!collapsed&&<div style={{padding:"8px 10px 3px",fontSize:9,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{g.group}</div>}
+            {!collapsed&&<div style={{padding:"8px 10px 3px",fontSize:9,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{tr("nav."+g.gk)||g.group}</div>}
             {collapsed&&<div style={{height:1,background:C.border,margin:"4px 6px"}}/>}
-            {g.items.map(n=><button key={n.id} onClick={()=>navClick(n.id)} style={{display:"flex",alignItems:"center",padding:collapsed?"6px":"6px 10px",border:"none",borderRadius:3,cursor:"pointer",fontFamily:sans,fontSize:11,fontWeight:page===n.id?500:200,width:"100%",background:page===n.id?n.id==="warroom"?C.warRedDim:C.goldDim:"transparent",color:page===n.id?(n.id==="warroom"?C.critical:C.gold):C.textSec,transition:"all 0.15s",justifyContent:collapsed?"center":"flex-start",whiteSpace:"nowrap",overflow:"hidden"}}>{collapsed?<span style={{fontSize:9,fontFamily:mono}}>{n.label.slice(0,2).toUpperCase()}</span>:n.label}</button>)}
+            {g.items.map(n=>{const label=tr("nav."+n.id)||n.label;return <button key={n.id} onClick={()=>navClick(n.id)} style={{display:"flex",alignItems:"center",padding:collapsed?"6px":"6px 10px",border:"none",borderRadius:3,cursor:"pointer",fontFamily:sans,fontSize:11,fontWeight:page===n.id?500:200,width:"100%",background:page===n.id?n.id==="warroom"?C.warRedDim:C.goldDim:"transparent",color:page===n.id?(n.id==="warroom"?C.critical:C.gold):C.textSec,transition:"all 0.15s",justifyContent:collapsed?"center":"flex-start",whiteSpace:"nowrap",overflow:"hidden"}}>{collapsed?<span style={{fontSize:9,fontFamily:mono}}>{label.slice(0,2).toUpperCase()}</span>:label}</button>;})}
           </div>)}
         </nav>
         <div style={{padding:"6px 5px",borderTop:`1px solid ${C.border}`}}>
-          <button onClick={handleSignOut} style={{display:"flex",alignItems:"center",padding:collapsed?"6px":"6px 10px",border:"none",cursor:"pointer",background:"transparent",width:"100%",color:C.textDim,fontSize:11,fontFamily:sans,borderRadius:3,justifyContent:collapsed?"center":"flex-start",fontWeight:200}}>{collapsed?"×":isDemo?"Exit Demo":"Sign Out"}</button>
+          <button onClick={handleSignOut} style={{display:"flex",alignItems:"center",padding:collapsed?"6px":"6px 10px",border:"none",cursor:"pointer",background:"transparent",width:"100%",color:C.textDim,fontSize:11,fontFamily:sans,borderRadius:3,justifyContent:collapsed?"center":"flex-start",fontWeight:200}}>{collapsed?"×":isDemo?tr("btn.exitDemo"):tr("btn.signOut")}</button>
         </div>
       </aside>
       <main style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         <header className="shp" style={{height:44,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <button className="smt" onClick={()=>setMobileNav(!mobileNav)} style={{display:"none",alignItems:"center",justifyContent:"center",width:30,height:30,border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.gold,cursor:"pointer",fontSize:13}}>☰</button>
-            <span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{NAV.flatMap(g=>g.items).find(n=>n.id===page)?.label||"Command Center"}</span>
+            <span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{(()=>{const item=NAV.flatMap(g=>g.items).find(n=>n.id===page);return item?tr("nav."+item.id):tr("nav.dash");})()}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <select value={lang} onChange={e=>{setLang(e.target.value);setLangState(e.target.value);}} style={{background:"transparent",border:`1px solid ${C.border}`,borderRadius:3,color:C.textDim,fontSize:10,fontFamily:mono,padding:"4px 8px",cursor:"pointer",letterSpacing:"1px"}}>
-              {LANGS.map(l=><option key={l.code} value={l.code} style={{background:C.bg,color:C.text}}>{l.code.toUpperCase()}</option>)}
-            </select>
-            <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPageScroll("settings")}>
+            <div style={{minWidth:80}}><Dropdown small align="right" value={lang} onChange={v=>{setLang(v);setLangState(v);}} options={LANGS.map(l=>({value:l.code,label:l.code.toUpperCase()+" — "+l.name}))}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPageScroll("settings")} title={tr("nav.settings")}>
               <div style={{width:24,height:24,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.border}`,fontSize:10,fontFamily:serif,color:C.gold}}>{(user?.name||"O")[0]}</div>
             </div>
           </div>
         </header>
         <div ref={mainRef} className="smp" style={{flex:1,overflow:"auto",padding:"20px 24px"}}>{rp()}</div>
         <footer style={{padding:"6px 24px",borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:4}}>
-          <span style={{fontSize:8,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim}}>SPY BY ATLAS — DESIGNED BY INTELLIGENCE PROFESSIONALS</span>
-          <span style={{display:"flex",alignItems:"center",gap:6,fontSize:8,fontFamily:mono,color:C.textDim}}><span style={{width:4,height:4,borderRadius:"50%",background:C.low,animation:"glow 3s infinite"}}/>ENCRYPTED</span>
+          <span style={{fontSize:8,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim}}>{tr("footer.tagline")}</span>
+          <span style={{display:"flex",alignItems:"center",gap:6,fontSize:8,fontFamily:mono,color:C.textDim}}><span style={{width:4,height:4,borderRadius:"50%",background:C.low,animation:"glow 3s infinite"}}/>{tr("footer.encrypted")}</span>
         </footer>
       </main>
     </div></>;
