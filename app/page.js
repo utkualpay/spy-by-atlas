@@ -1,18 +1,32 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/use-translation";
 
-const C={bg:"#09090b",bgCard:"#131316",border:"#1f1f25",text:"#e4e0d9",textSec:"#9d9890",textDim:"#5c5854",gold:"#c4a265",goldDim:"rgba(196,162,101,0.10)"};
+const C={bg:"#09090b",bgCard:"#131316",bgInput:"#18181c",border:"#1f1f25",text:"#e4e0d9",textSec:"#9d9890",textDim:"#5c5854",gold:"#c4a265",goldDim:"rgba(196,162,101,0.10)"};
 const mono="'IBM Plex Mono',monospace",serif="'Cormorant Garamond',serif",sans="'Raleway',sans-serif";
 const FORMSPREE=process.env.NEXT_PUBLIC_FORMSPREE_ID||"mvzvdjrq";
 
 function GB({children,href,small,outline}){const s={display:"inline-block",padding:small?"10px 20px":"15px 30px",border:`1px solid ${outline?C.border:C.gold}`,borderRadius:3,background:"transparent",color:outline?C.textSec:C.gold,fontSize:small?10:11,fontFamily:mono,letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer",textDecoration:"none",transition:"all 0.3s",textAlign:"center"};return href?<Link href={href} style={s}>{children}</Link>:<span style={s}>{children}</span>;}
 
+// Themed language picker — for landing + auth pages
+function LangPicker(){
+  const{lang,setLang,LANGS}=useTranslation();
+  const[open,setOpen]=useState(false);
+  return <div style={{position:"relative"}} onMouseLeave={()=>setOpen(false)}>
+    <button onClick={()=>setOpen(!open)} style={{padding:"6px 10px",background:"transparent",border:`1px solid ${open?C.gold:C.border}`,borderRadius:3,color:C.textDim,fontSize:10,fontFamily:mono,letterSpacing:"1.5px",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>{lang.toUpperCase()}<span style={{fontSize:7,transform:open?"rotate(180deg)":"none",transition:"transform 0.2s"}}>▾</span></button>
+    {open&&<div style={{position:"absolute",top:"calc(100% + 4px)",right:0,minWidth:130,background:C.bgCard,border:`1px solid ${C.gold}`,borderRadius:3,boxShadow:"0 8px 24px rgba(0,0,0,0.5)",zIndex:50,overflow:"hidden"}}>
+      {LANGS.map(l=><div key={l.code} onClick={()=>{setLang(l.code);setOpen(false);}} style={{padding:"8px 12px",cursor:"pointer",background:lang===l.code?C.goldDim:"transparent",color:lang===l.code?C.gold:C.text,fontSize:11,fontWeight:lang===l.code?500:300,borderBottom:`1px solid ${C.border}`}}>{l.code.toUpperCase()} — {l.name}</div>)}
+    </div>}
+  </div>;
+}
+
 export default function LandingPage(){
+  const{t}=useTranslation();
   const[cf,setCf]=useState({name:"",email:"",message:""});const[cs,setCs]=useState(false);const[cl,setCl]=useState(false);
   const sendC=async()=>{if(!cf.email.trim()||!cf.message.trim())return;setCl(true);try{await fetch(`https://formspree.io/f/${FORMSPREE}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({_subject:"[Spy] Contact",name:cf.name,email:cf.email,message:cf.message,timestamp:new Date().toISOString()})});setCs(true);}catch(e){}setCl(false);};
   const inp={width:"100%",padding:"14px 16px",background:"rgba(255,255,255,0.03)",border:`1px solid ${C.border}`,borderRadius:3,color:C.text,fontSize:14,fontFamily:sans,outline:"none",fontWeight:200,boxSizing:"border-box"};
-  const features=[{t:"OSINT Search",d:"Analyst-grade intelligence across social platforms, breach databases, and the open web."},{t:"War Room",d:"A senior intelligence analyst on call at any hour. Brief them on a situation, receive a professional assessment in return."},{t:"Breach Console",d:"Cross-reference credentials against breach databases with formal impact assessments."},{t:"Social Monitoring",d:"Continuous security monitoring of your social media presence."},{t:"Threat Prediction",d:"Pattern-of-life analysis to preempt security risks before they materialize."},{t:"Executive Protection",d:"Canary tokens, data poisoning, digital decoys for high-value individuals."},{t:"Daily Briefs",d:"Personalized intelligence briefs calibrated to your exposure, sector, and threat environment."},{t:"Make Me Invisible",d:"One button. Fifteen data brokers. Your presence begins to recede the moment you click it."}];
+  const features=[{k:"osint",t:"OSINT Search",d:"Analyst-grade intelligence across social platforms, breach databases, and the open web."},{k:"warroom",t:"War Room",d:"A senior intelligence analyst on call at any hour. Brief them on a situation, receive a professional assessment in return."},{k:"breaches",t:"Breach Console",d:"Cross-reference credentials against breach databases with formal impact assessments."},{k:"social",t:"Social Monitoring",d:"Continuous security monitoring of your social media presence."},{k:"predict",t:"Threat Prediction",d:"Pattern-of-life analysis to preempt security risks before they materialize."},{k:"execprot",t:"Executive Protection",d:"Canary tokens, data poisoning, digital decoys for high-value individuals."},{k:"brief",t:"Daily Briefs",d:"Personalized intelligence briefs calibrated to your exposure, sector, and threat environment."},{k:"invisible",t:"Make Me Invisible",d:"One button. Fifteen data brokers. Your presence begins to recede the moment you click it."}];
   const tiers=[{id:"obs",n:"Observer",p:"Free",f:["Situation map","Intel feed (limited)","Platform preview"]},{id:"a",n:"Personal Pro",p:"$49",r:true,f:["7-day free trial","Unlimited OSINT","Daily briefs","War Room","Data broker removal","Social monitoring","Travel security","Reports archive"]},{id:"d",n:"Business Premium",p:"$149",desc:"+$15/seat",f:["Everything in Personal Pro","Supply chain intel","Dark web monitoring","Deception technology","Team seats ($15/ea)","Identity verification","Fraud detection","Case management"]},{id:"e",n:"Executive",p:"Custom",f:["Everything in Business","Dedicated analyst team","Deepfake poisoning","Custom integrations","SLA guarantee"]}];
 
   return <div style={{minHeight:"100vh",background:C.bg,overflow:"hidden"}}>
@@ -23,34 +37,42 @@ export default function LandingPage(){
 
     <nav className="lnp" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"24px 60px",position:"relative",zIndex:1}}>
       <div style={{display:"flex",alignItems:"baseline",gap:3}}><span style={{fontSize:22,fontFamily:serif,fontWeight:300,color:C.gold,letterSpacing:"3px"}}>Spy</span><span style={{fontSize:7,color:C.textDim,fontFamily:mono,letterSpacing:"1.5px"}}>by Atlas</span></div>
-      <div className="lnav" style={{display:"flex",gap:28,alignItems:"center"}}><a href="#features" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>Features</a><a href="#pricing" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>Pricing</a><a href="#contact" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>Contact</a><Link href="/demo" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>Demo</Link><GB small href="/login">Sign In</GB></div>
+      <div className="lnav" style={{display:"flex",gap:24,alignItems:"center"}}>
+        <a href="#features" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>{t("nav.features")}</a>
+        <a href="#pricing" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>{t("nav.pricing")}</a>
+        <Link href="/about" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>{t("nav.about")}</Link>
+        <a href="#contact" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>{t("nav.contact")}</a>
+        <Link href="/demo" style={{fontSize:12,color:C.textSec,fontWeight:300,textDecoration:"none"}}>{t("nav.demo")}</Link>
+        <LangPicker/>
+        <GB small href="/login">{t("landing.signIn")}</GB>
+      </div>
     </nav>
 
     <div className="lsec" style={{maxWidth:900,margin:"0 auto",padding:"70px 60px 50px",textAlign:"center",position:"relative",zIndex:1,animation:"fadeIn 1s ease"}}>
-      <div style={{fontSize:11,fontFamily:mono,letterSpacing:"4px",color:C.gold,textTransform:"uppercase",marginBottom:20}}>Designed & Operated by Intelligence Experts</div>
-      <h1 className="lh1" style={{fontSize:62,fontFamily:serif,fontWeight:300,lineHeight:1.1,letterSpacing:"-1px",marginBottom:20}}>Know everything.<br/>Before everyone.</h1>
-      <p style={{fontSize:15,color:C.textSec,fontWeight:200,lineHeight:1.75,maxWidth:540,margin:"0 auto 36px"}}>A private intelligence platform built by intelligence professionals. Continuous awareness of your digital exposure, competitive landscape, and global threat environment.</p>
-      <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}><GB href="/signup">Get Started</GB><GB href="/demo" outline>View Demo</GB></div>
-      <div style={{marginTop:28,fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase"}}>7-day free trial — full access — cancel anytime</div>
+      <div style={{fontSize:11,fontFamily:mono,letterSpacing:"4px",color:C.gold,textTransform:"uppercase",marginBottom:20}}>{t("landing.eyebrow")}</div>
+      <h1 className="lh1" style={{fontSize:62,fontFamily:serif,fontWeight:300,lineHeight:1.1,letterSpacing:"-1px",marginBottom:20}}>{t("landing.heroTitle")}<br/>{t("landing.heroTitle2")}</h1>
+      <p style={{fontSize:15,color:C.textSec,fontWeight:200,lineHeight:1.75,maxWidth:540,margin:"0 auto 36px"}}>{t("landing.heroDesc")}</p>
+      <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}><GB href="/signup">{t("landing.getStarted")}</GB><GB href="/demo" outline>{t("landing.viewDemo")}</GB></div>
+      <div style={{marginTop:28,fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase"}}>{t("landing.trial")}</div>
     </div>
 
     <div className="lst" style={{display:"flex",justifyContent:"center",gap:50,padding:"30px 20px",position:"relative",zIndex:1,flexWrap:"wrap"}}>
-      {[["3.2B","Records monitored"],["24","Intel sources"],["46+","Active conflicts tracked"],["24/7","Analyst support"]].map(([v,l],i)=><div key={i} style={{textAlign:"center"}}><div className="lstv" style={{fontSize:34,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:2}}>{v}</div><div style={{fontSize:10,color:C.textDim,fontFamily:mono,letterSpacing:".8px"}}>{l}</div></div>)}
+      {[["3.2B",t("landing.statsMonitored")],["24",t("landing.statsSources")],["46+",t("landing.statsConflicts")],["24/7",t("landing.statsSupport")]].map(([v,l],i)=><div key={i} style={{textAlign:"center"}}><div className="lstv" style={{fontSize:34,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:2}}>{v}</div><div style={{fontSize:10,color:C.textDim,fontFamily:mono,letterSpacing:".8px"}}>{l}</div></div>)}
     </div>
 
     <div className="lsec" style={{maxWidth:820,margin:"30px auto",padding:"0 60px",textAlign:"center",position:"relative",zIndex:1}}>
       <div style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:4,padding:"24px 30px"}}>
-        <div style={{fontSize:11,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Every module reflects methodology used by professional intelligence teams. Analysts with backgrounds in national security, counterintelligence, and corporate investigation. Data sourced from <span style={{color:C.gold}}>CFR</span>, <span style={{color:C.gold}}>ACLED</span>, <span style={{color:C.gold}}>ICG</span>, <span style={{color:C.gold}}>ISW</span>, <span style={{color:C.gold}}>IISS</span>, and <span style={{color:C.gold}}>SIPRI</span>.</div>
+        <div style={{fontSize:11,color:C.textSec,fontWeight:200,lineHeight:1.7}}>{t("landing.credibility")}</div>
       </div>
     </div>
 
     <div id="features" className="lsec" style={{maxWidth:1100,margin:"50px auto 0",padding:"0 60px",position:"relative",zIndex:1}}>
-      <div style={{textAlign:"center",marginBottom:40}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.textDim,textTransform:"uppercase",marginBottom:10}}>Capabilities</div><h2 style={{fontSize:30,fontFamily:serif,fontWeight:300}}>Full-Spectrum Intelligence</h2></div>
-      <div className="lg4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>{features.map((f,i)=><div key={i} style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:4,padding:22,animation:`fadeIn 0.5s ease ${.3+i*.06}s both`}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.gold,textTransform:"uppercase",marginBottom:10}}>{f.t}</div><p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6}}>{f.d}</p></div>)}</div>
+      <div style={{textAlign:"center",marginBottom:40}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.textDim,textTransform:"uppercase",marginBottom:10}}>{t("landing.featuresHeader")}</div><h2 style={{fontSize:30,fontFamily:serif,fontWeight:300}}>Full-Spectrum Intelligence</h2></div>
+      <div className="lg4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>{features.map((f,i)=><div key={i} style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:4,padding:22,animation:`fadeIn 0.5s ease ${.3+i*.06}s both`}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.gold,textTransform:"uppercase",marginBottom:10}}>{t("nav."+f.k)||f.t}</div><p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6}}>{f.d}</p></div>)}</div>
     </div>
 
     <div id="pricing" className="lsec" style={{maxWidth:1100,margin:"70px auto 0",padding:"0 60px",position:"relative",zIndex:1}}>
-      <div style={{textAlign:"center",marginBottom:40}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.textDim,textTransform:"uppercase",marginBottom:10}}>Pricing</div><h2 style={{fontSize:30,fontFamily:serif,fontWeight:300}}>Intelligence as a Service</h2></div>
+      <div style={{textAlign:"center",marginBottom:40}}><div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.textDim,textTransform:"uppercase",marginBottom:10}}>{t("nav.pricing")}</div><h2 style={{fontSize:30,fontFamily:serif,fontWeight:300}}>{t("landing.pricingHeader")}</h2></div>
       <div className="lg4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>{tiers.map((p,i)=><div key={p.id} style={{background:C.bgCard,border:`1px solid ${p.r?"rgba(196,162,101,0.25)":C.border}`,borderRadius:4,padding:22,position:"relative"}}>{p.r&&<div style={{position:"absolute",top:-1,left:16,padding:"2px 10px",background:C.gold,color:C.bg,fontSize:9,fontFamily:mono,letterSpacing:"1.5px",textTransform:"uppercase",borderRadius:"0 0 3px 3px"}}>Recommended</div>}<div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase",marginBottom:8}}>{p.n}</div><div style={{fontSize:30,fontFamily:serif,fontWeight:300,marginBottom:16}}>{p.p}<span style={{fontSize:12,color:C.textDim}}>{p.p!=="Free"&&p.p!=="Custom"?"/mo":""}</span></div>{p.f.map((f,j)=><div key={j} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.textSec,fontWeight:200,marginBottom:4}}><span style={{color:C.gold,fontSize:9}}>✦</span>{f}</div>)}<div style={{marginTop:14}}><GB small href="/signup">{p.p==="Custom"?"Contact":"Get Started"}</GB></div></div>)}</div>
     </div>
 

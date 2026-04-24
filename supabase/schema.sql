@@ -166,6 +166,35 @@ CREATE TABLE IF NOT EXISTS public.notes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ═══ STRATEGIC RESEARCH REPORTS (published by admin, readable by all authenticated users) ═══
+CREATE TABLE IF NOT EXISTS public.strategic_reports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  category TEXT DEFAULT 'analysis',
+  classification TEXT DEFAULT 'UNCLASSIFIED',
+  content TEXT NOT NULL,
+  summary TEXT,
+  tags TEXT[],
+  published BOOLEAN DEFAULT FALSE,
+  published_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_strategic_reports_published ON public.strategic_reports(published, published_at DESC);
+
+-- ═══ ISSUE REPORTS (user-submitted complaints/bugs) ═══
+CREATE TABLE IF NOT EXISTS public.issue_reports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  user_email TEXT,
+  issue_type TEXT CHECK (issue_type IN ('bug','feature','billing','account','other')),
+  details TEXT NOT NULL,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open','reviewing','resolved','closed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ═══ ADMIN LOG ═══
 CREATE TABLE IF NOT EXISTS public.admin_log (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -174,6 +203,35 @@ CREATE TABLE IF NOT EXISTS public.admin_log (
 );
 
 -- ═══ RLS ═══
+-- Backfill columns on existing profiles table (safe if columns already exist)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS account_type TEXT CHECK (account_type IN ('personal','family','business'));
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_master BOOLEAN DEFAULT TRUE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS master_account_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS card_on_file BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS paddle_customer_id TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS paddle_subscription_id TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarded BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tour_completed BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS eula_accepted_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS explicit_content_accepted_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email_reports_preference TEXT DEFAULT 'platform_only';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'en';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'UTC+3';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS sector_focus TEXT DEFAULT 'All Sectors';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS twitter_handle TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS instagram_handle TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS company TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS industry TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS interests TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS concerns TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS daily_routine JSONB;
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.seats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
@@ -186,6 +244,26 @@ ALTER TABLE public.honeytokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.suppression_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supply_chain ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.strategic_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.issue_reports ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies first so the script is safe to re-run
+DROP POLICY IF EXISTS "own" ON public.profiles;
+DROP POLICY IF EXISTS "own" ON public.seats;
+DROP POLICY IF EXISTS "own" ON public.reports;
+DROP POLICY IF EXISTS "own" ON public.social_handles;
+DROP POLICY IF EXISTS "own" ON public.warroom_sessions;
+DROP POLICY IF EXISTS "own" ON public.cpir_results;
+DROP POLICY IF EXISTS "ins" ON public.cpir_results;
+DROP POLICY IF EXISTS "own" ON public.image_scans;
+DROP POLICY IF EXISTS "own" ON public.honeytokens;
+DROP POLICY IF EXISTS "own" ON public.suppression_requests;
+DROP POLICY IF EXISTS "own" ON public.supply_chain;
+DROP POLICY IF EXISTS "own" ON public.notes;
+DROP POLICY IF EXISTS "read" ON public.breach_entries;
+DROP POLICY IF EXISTS "read_strategic" ON public.strategic_reports;
+DROP POLICY IF EXISTS "own_issue" ON public.issue_reports;
+DROP POLICY IF EXISTS "insert_issue" ON public.issue_reports;
 
 CREATE POLICY "own" ON public.profiles FOR ALL USING (auth.uid() = id);
 CREATE POLICY "own" ON public.seats FOR ALL USING (master_id = auth.uid() OR user_id = auth.uid());

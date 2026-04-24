@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { t as T, LANGS, getLang, setLang } from "@/lib/i18n";
+import { useTranslation } from "@/lib/use-translation";
 
 // ── THEME ────────────────────────────────────────────────────────────
 const C={bg:"#09090b",bgCard:"#131316",bgHover:"#1a1a1f",bgSidebar:"#0c0c0f",bgInput:"#18181c",border:"#1f1f25",borderHover:"#2a2a32",text:"#e4e0d9",textSec:"#9d9890",textDim:"#5c5854",gold:"#c4a265",goldDim:"rgba(196,162,101,0.10)",goldMid:"rgba(196,162,101,0.20)",critical:"#c45c5c",criticalDim:"rgba(196,92,92,0.10)",high:"#c49a5c",highDim:"rgba(196,154,92,0.10)",medium:"#7c8db5",mediumDim:"rgba(124,141,181,0.10)",low:"#6b9e7a",lowDim:"rgba(107,158,122,0.10)",info:"#8b8db5",infoDim:"rgba(139,141,181,0.10)",warRed:"#8b1a1a",warRedDim:"rgba(139,26,26,0.12)",warRedBorder:"rgba(139,26,26,0.35)"};
@@ -84,10 +85,13 @@ function Dropdown({value,onChange,options,label,small,placeholder,align}){
 }
 
 // ── WIZARD — step-based guided flow (replaces forms) ──────────────────
-function Wizard({steps,onComplete,onCancel,submitLabel="Generate Report"}){
-  const[idx,setIdx]=useState(0);const[data,setData]=useState({});const[submitting,setSubmitting]=useState(false);
-  const step=steps[idx];const isLast=idx===steps.length-1;
-  const canAdvance=!step.required||data[step.key]!==undefined&&data[step.key]!=="";
+function Wizard({steps,onComplete,onCancel,submitLabel="Generate Report",initialData}){
+  const{t:tr}=useTranslation();
+  const[idx,setIdx]=useState(0);const[data,setData]=useState(initialData||{});const[submitting,setSubmitting]=useState(false);
+  // When initialData changes (e.g. user picks a quick target), merge into state and jump to last step
+  useEffect(()=>{if(initialData&&Object.keys(initialData).some(k=>initialData[k]!==undefined&&initialData[k]!==""))setData({...data,...initialData});},[initialData]);
+  const step=steps[idx];if(!step)return null;const isLast=idx===steps.length-1;
+  const canAdvance=!step.required||(data[step.key]!==undefined&&data[step.key]!=="");
   const advance=async()=>{
     if(!canAdvance)return;
     if(isLast){setSubmitting(true);await onComplete(data);setSubmitting(false);}
@@ -99,7 +103,7 @@ function Wizard({steps,onComplete,onCancel,submitLabel="Generate Report"}){
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
       {steps.map((s,i)=><div key={i} style={{flex:1,minWidth:20,height:3,borderRadius:2,background:i<=idx?C.gold:C.border,transition:"background 0.3s"}}/>)}
     </div>
-    <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Step {idx+1} of {steps.length}</div>
+    <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>{tr("wiz.step")} {idx+1} {tr("wiz.of")} {steps.length}</div>
     <div style={{fontSize:22,fontFamily:serif,fontWeight:300,marginBottom:6}}>{step.title}</div>
     {step.desc&&<p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:20}}>{step.desc}</p>}
 
@@ -117,11 +121,11 @@ function Wizard({steps,onComplete,onCancel,submitLabel="Generate Report"}){
 
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
       <div style={{display:"flex",gap:8}}>
-        {idx>0&&<GoldBtn small onClick={back}>← Back</GoldBtn>}
-        {onCancel&&idx===0&&<button onClick={onCancel} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,letterSpacing:"1px"}}>Cancel</button>}
+        {idx>0&&<GoldBtn small onClick={back}>← {tr("common.back")}</GoldBtn>}
+        {onCancel&&idx===0&&<button onClick={onCancel} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,letterSpacing:"1px"}}>{tr("common.cancel")}</button>}
       </div>
       <GoldBtn onClick={advance} disabled={!canAdvance||submitting}>
-        {submitting?"Processing...":isLast?submitLabel:"Next →"}
+        {submitting?tr("common.processing"):isLast?submitLabel:`${tr("common.next")} →`}
       </GoldBtn>
     </div>
   </Card>;
@@ -336,20 +340,25 @@ function PgOsint({isDemo}){
 // PAGE: INTEL FEED (#4 — Gemini powered)
 // ═══════════════════════════════════════════════════════════════════
 function PgIntel(){
-  const[sector,setSector]=useState("All Sectors");const[news,setNews]=useState([]);const[loading,setLoading]=useState(false);const[loaded,setLoaded]=useState(false);const[error,setError]=useState("");const[filter,setFilter]=useState("all");
-  const fetchNews=async()=>{setLoading(true);setError("");try{const r=await fetch("/api/intel");const data=await r.json();if(Array.isArray(data)&&data.length>0)setNews(data);else setError("Retry in a moment.");}catch(e){setError("Connection failed.");}setLoading(false);setLoaded(true);};
-  useEffect(()=>{if(!loaded)fetchNews();},[]);
+  const{t:tr}=useTranslation();
+  const[sector,setSector]=useState("All Sectors");const[news,setNews]=useState([]);const[loading,setLoading]=useState(false);const[loaded,setLoaded]=useState(false);const[error,setError]=useState("");const[filter,setFilter]=useState("all");const[lastUpdate,setLastUpdate]=useState(null);
+  const fetchNews=async()=>{setLoading(true);setError("");try{const r=await fetch("/api/intel");const data=await r.json();if(Array.isArray(data)&&data.length>0){setNews(data);setLastUpdate(new Date());}else setError("Retry in a moment.");}catch(e){setError("Connection failed.");}setLoading(false);setLoaded(true);};
+  useEffect(()=>{if(!loaded)fetchNews();const id=setInterval(fetchNews,5*60*1000);return()=>clearInterval(id);},[]);
   const cats=["all","vulnerability","threat-actor","ransomware","nation-state","policy","data-breach","geopolitical"];
   const filtered=news.filter(n=>(sector==="All Sectors"||n.sector===sector)&&(filter==="all"||n.category===filter));
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Intelligence Feed" subtitle="Curated intelligence from verified sources. Updated continuously."/>
+  const ago=(d)=>{if(!d)return "";const s=Math.floor((Date.now()-d.getTime())/1000);if(s<60)return `${s}s ago`;if(s<3600)return `${Math.floor(s/60)}m ago`;return `${Math.floor(s/3600)}h ago`;};
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Intelligence Feed" subtitle="Curated intelligence from verified sources. Auto-refreshes every 5 minutes."/>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:12}}>
       <div><div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:6}}>Sector</div><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{SECTORS.map(s=><button key={s} onClick={()=>setSector(s)} style={{padding:"5px 12px",border:`1px solid ${sector===s?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",fontFamily:sans,background:sector===s?C.goldDim:"transparent",color:sector===s?C.gold:C.textDim,fontWeight:300}}>{s}</button>)}</div></div>
-      <GoldBtn small onClick={fetchNews} disabled={loading}>{loading?"Fetching...":"Refresh"}</GoldBtn>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+        {lastUpdate&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:10,fontFamily:mono,color:C.textDim}}><span style={{width:5,height:5,borderRadius:"50%",background:C.low,animation:"glow 3s infinite"}}/>LIVE · Updated {ago(lastUpdate)}</div>}
+        <GoldBtn small onClick={fetchNews} disabled={loading}>{loading?"Fetching...":"Refresh now"}</GoldBtn>
+      </div>
     </div>
     <div style={{display:"flex",gap:5,marginBottom:18,flexWrap:"wrap"}}>{cats.map(c=><button key={c} onClick={()=>setFilter(c)} style={{padding:"5px 12px",border:`1px solid ${filter===c?C.gold:C.border}`,borderRadius:20,fontSize:10,cursor:"pointer",fontFamily:sans,background:filter===c?C.goldDim:"transparent",color:filter===c?C.gold:C.textDim,textTransform:"capitalize",fontWeight:300}}>{c==="all"?"All":c.replace("-"," ")}</button>)}</div>
-    {loading&&<Loader text="Fetching intelligence — up to 30 seconds"/>}
-    {error&&!loading&&<Card style={{padding:24,textAlign:"center"}}><div style={{color:C.high,marginBottom:12,fontSize:13}}>{error}</div><GoldBtn small onClick={fetchNews}>Retry</GoldBtn></Card>}
-    {!loading&&filtered.map((n,i)=><Card key={i} onClick={()=>n.url&&n.url!=="#"&&window.open(n.url,"_blank")} style={{padding:18,marginBottom:5,cursor:n.url&&n.url!=="#"?"pointer":"default"}}>
+    {loading&&news.length===0&&<Loader text="Fetching intelligence — up to 30 seconds"/>}
+    {error&&!loading&&news.length===0&&<Card style={{padding:24,textAlign:"center"}}><div style={{color:C.high,marginBottom:12,fontSize:13}}>{error}</div><GoldBtn small onClick={fetchNews}>Retry</GoldBtn></Card>}
+    {filtered.map((n,i)=><Card key={i} onClick={()=>n.url&&n.url!=="#"&&window.open(n.url,"_blank")} style={{padding:18,marginBottom:5,cursor:n.url&&n.url!=="#"?"pointer":"default"}}>
       <div style={{display:"flex",gap:8,marginBottom:5,flexWrap:"wrap"}}><Badge severity={n.severity||"info"}/><span style={{fontSize:10,fontFamily:mono,color:C.textDim,textTransform:"uppercase"}}>{(n.category||"").replace("-"," ")}</span></div>
       <div style={{fontSize:14,fontWeight:500,marginBottom:4,lineHeight:1.4}}>{n.title}</div>
       <div style={{fontSize:13,color:C.textSec,fontWeight:200}}>{n.summary}</div>
@@ -489,7 +498,8 @@ return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Situation Map" sub
 // PAGE: GENERIC ANALYSIS (#1 — each with custom form)
 // ═══════════════════════════════════════════════════════════════════
 function PgAnalysis({module,title,subtitle,fields,apiRoute,bodyKey,extraBody,quickTargets,targetLabel,contextOptions,typeOptions}){
-  const[mode,setMode]=useState("picker"); // picker → wizard → loading/result
+  const{t:tr}=useTranslation();
+  const[mode,setMode]=useState("wizard"); // wizard → loading → result (no picker step)
   const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);const[presetData,setPresetData]=useState({});
 
   const runAnalysis=async(data)=>{
@@ -507,10 +517,7 @@ function PgAnalysis({module,title,subtitle,fields,apiRoute,bodyKey,extraBody,qui
 
   const pickPreset=(preset)=>{
     setPresetData({target:preset.target||"",type:preset.type||"",context:preset.context||""});
-    setMode("wizard");
   };
-
-  const startFresh=()=>{setPresetData({});setMode("wizard");};
 
   // Build wizard steps dynamically
   const wizardSteps=[];
@@ -525,25 +532,20 @@ function PgAnalysis({module,title,subtitle,fields,apiRoute,bodyKey,extraBody,qui
 
   return <div style={{animation:"fadeIn 0.4s ease"}}><SH title={title} subtitle={subtitle}/>
 
-    {mode==="picker"&&<div>
-      {quickTargets&&quickTargets.length>0?<>
-        <QuickTargets title="Common Targets — One Click" targets={quickTargets} onPick={pickPreset}/>
-        <div style={{textAlign:"center",margin:"12px 0 16px"}}><span style={{fontSize:10,fontFamily:mono,color:C.textDim,letterSpacing:"2px"}}>OR</span></div>
-      </>:null}
-      <div style={{textAlign:"center"}}>
-        <GoldBtn onClick={startFresh}>Start Custom Analysis</GoldBtn>
-      </div>
-    </div>}
+    {mode==="wizard"&&<>
+      {quickTargets&&quickTargets.length>0&&<div style={{marginBottom:16}}>
+        <QuickTargets title={tr("wiz.commonTargets")} targets={quickTargets} onPick={pickPreset}/>
+      </div>}
+      <Wizard steps={wizardSteps} initialData={presetData} onComplete={runAnalysis} submitLabel={tr("wiz.generate")}/>
+    </>}
 
-    {mode==="wizard"&&<Wizard steps={wizardSteps.map(s=>({...s,...(presetData[s.key]?{}:null)}))} onComplete={runAnalysis} onCancel={()=>setMode("picker")} submitLabel="Generate Report"/>}
-
-    {mode==="loading"&&<Loader text="Conducting deep analysis — 30-60 seconds"/>}
+    {mode==="loading"&&<Loader text={tr("common.generatingReport")}/>}
 
     {mode==="result"&&<>
-      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setMode("picker");setResult(null);}}>← New Analysis</GoldBtn></div>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setMode("wizard");setResult(null);setPresetData({});}}>{tr("wiz.newAnalysis")}</GoldBtn></div>
       {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
         <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{title.toUpperCase()} REPORT</div>
-        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div>
+        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>{tr("common.classification")} — {new Date().toLocaleString()}</div>
         <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div>
       </Card>}
       {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
@@ -722,12 +724,96 @@ function PgCapabilities(){
 // ═══════════════════════════════════════════════════════════════════
 // PAYWALL (#1 — hard gate for observers)
 // ═══════════════════════════════════════════════════════════════════
-function Paywall({setPage}){return <div style={{animation:"fadeIn 0.4s ease"}}><Card style={{padding:48,maxWidth:480,margin:"40px auto",textAlign:"center"}}>
-  <div style={{fontSize:28,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:12}}>Premium Intelligence</div>
-  <p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:8}}>This module requires an active subscription.</p>
-  <p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:28}}>Start your 7-day free trial to unlock all intelligence capabilities. Full access, no limitations. Cancel anytime.</p>
-  <GoldBtn full onClick={()=>setPage("membership")}>View Plans & Start Trial</GoldBtn>
-</Card></div>;}
+// ── THREAT PULSE — composite risk indicator in header (F2) ───────────
+function ThreatPulse({user}){
+  // Derive a simple composite score based on available signals
+  const[score,setScore]=useState(null);
+  useEffect(()=>{
+    const compute=async()=>{
+      let risk=15; // baseline
+      try{
+        // Recent reports → risk signal (presence of critical findings increases score)
+        const r=await fetch("/api/reports");const reports=await r.json();
+        if(Array.isArray(reports)){
+          risk+=Math.min(30,reports.length*3);
+          if(reports.some(rep=>(rep.content||"").toUpperCase().includes("CRITICAL")))risk+=20;
+          if(reports.some(rep=>(rep.content||"").toUpperCase().includes("HIGH")))risk+=10;
+        }
+      }catch(e){}
+      risk=Math.min(95,Math.max(5,risk));
+      setScore(risk);
+    };
+    compute();const id=setInterval(compute,5*60*1000);return()=>clearInterval(id);
+  },[]);
+  if(score===null)return null;
+  const level=score<25?"LOW":score<50?"MODERATE":score<75?"ELEVATED":"HIGH";
+  const color=score<25?C.low:score<50?C.medium:score<75?C.high:C.critical;
+  return <div title={`Composite threat level: ${level} (${score})`} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",border:`1px solid ${color}40`,borderRadius:3,background:`${color}10`}}>
+    <span style={{width:6,height:6,borderRadius:"50%",background:color,animation:"glow 3s infinite"}}/>
+    <span style={{fontSize:9,fontFamily:mono,color:color,letterSpacing:"1.5px"}}>{level}</span>
+  </div>;
+}
+
+// ── TOAST NOTIFICATION SYSTEM (I3) ───────────────────────────────────
+function useToast(){
+  const[toasts,setToasts]=useState([]);
+  const show=useCallback((text,variant="info")=>{
+    const id=Date.now()+Math.random();
+    setToasts(t=>[...t,{id,text,variant}]);
+    setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3500);
+  },[]);
+  const ToastHost=()=><div style={{position:"fixed",top:20,right:20,zIndex:9500,display:"flex",flexDirection:"column",gap:8,pointerEvents:"none"}}>
+    {toasts.map(t=>{const color=t.variant==="success"?C.low:t.variant==="error"?C.critical:C.gold;return <div key={t.id} style={{padding:"10px 16px",background:C.bgCard,border:`1px solid ${color}40`,borderLeft:`3px solid ${color}`,borderRadius:3,color:C.text,fontSize:12,fontFamily:sans,fontWeight:300,minWidth:240,maxWidth:360,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",animation:"fadeIn 0.25s ease",pointerEvents:"auto"}}>{t.text}</div>;})}
+  </div>;
+  return{toast:show,ToastHost};
+}
+
+// ── COMMAND PALETTE (Cmd+K / Ctrl+K) (I1) ────────────────────────────
+function CommandPalette({open,onClose,onSelect,navItems}){
+  const[q,setQ]=useState("");const[idx,setIdx]=useState(0);const inputRef=useRef(null);
+  useEffect(()=>{if(open){setQ("");setIdx(0);setTimeout(()=>inputRef.current?.focus(),50);}},[open]);
+  if(!open)return null;
+  const results=navItems.filter(n=>!q||n.label.toLowerCase().includes(q.toLowerCase())||n.group?.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const onKey=(e)=>{
+    if(e.key==="Escape"){onClose();return;}
+    if(e.key==="ArrowDown"){e.preventDefault();setIdx(Math.min(results.length-1,idx+1));return;}
+    if(e.key==="ArrowUp"){e.preventDefault();setIdx(Math.max(0,idx-1));return;}
+    if(e.key==="Enter"){e.preventDefault();if(results[idx]){onSelect(results[idx].id);onClose();}return;}
+  };
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(9,9,11,0.75)",backdropFilter:"blur(3px)",zIndex:9400,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:"15vh",animation:"fadeIn 0.2s ease"}}>
+    <div onClick={e=>e.stopPropagation()} style={{width:"90%",maxWidth:560,background:C.bgCard,border:`1px solid ${C.gold}`,borderRadius:6,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.6)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 20px",borderBottom:`1px solid ${C.border}`}}>
+        <span style={{color:C.gold,fontSize:14,fontFamily:mono}}>⌕</span>
+        <input ref={inputRef} value={q} onChange={e=>{setQ(e.target.value);setIdx(0);}} onKeyDown={onKey} placeholder="Jump to..." style={{flex:1,background:"transparent",border:"none",outline:"none",color:C.text,fontSize:15,fontFamily:sans,fontWeight:200}}/>
+        <span style={{fontSize:9,fontFamily:mono,color:C.textDim,letterSpacing:"1px"}}>ESC</span>
+      </div>
+      <div style={{maxHeight:360,overflowY:"auto"}}>
+        {results.length===0&&<div style={{padding:"20px",textAlign:"center",fontSize:12,color:C.textDim,fontWeight:200}}>No matches.</div>}
+        {results.map((r,i)=><div key={r.id} onClick={()=>{onSelect(r.id);onClose();}} onMouseEnter={()=>setIdx(i)} style={{padding:"12px 20px",cursor:"pointer",background:i===idx?C.goldDim:"transparent",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+          <div><div style={{fontSize:13,color:i===idx?C.gold:C.text,fontWeight:i===idx?400:300}}>{r.label}</div><div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginTop:2,letterSpacing:"1px"}}>{r.group?.toUpperCase()}</div></div>
+          {i===idx&&<span style={{fontSize:9,fontFamily:mono,color:C.gold,letterSpacing:"1px"}}>↵ JUMP</span>}
+        </div>)}
+      </div>
+      <div style={{padding:"8px 20px",borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:9,fontFamily:mono,color:C.textDim,letterSpacing:"1px"}}>
+        <span>↑↓ NAVIGATE · ↵ OPEN · ESC CLOSE</span>
+        <span>SPY COMMAND</span>
+      </div>
+    </div>
+  </div>;
+}
+
+
+
+function Paywall({setPage}){
+  const{t:tr}=useTranslation();
+  return <div style={{animation:"fadeIn 0.4s ease"}}><Card style={{padding:48,maxWidth:480,margin:"40px auto",textAlign:"center"}}>
+    <div style={{fontSize:10,fontFamily:mono,letterSpacing:"3px",color:C.gold,textTransform:"uppercase",marginBottom:16}}>{tr("pay.title")}</div>
+    <div style={{fontSize:28,fontFamily:serif,fontWeight:300,color:C.gold,marginBottom:12}}>{tr("pay.title")}</div>
+    <p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:8}}>{tr("pay.subtitle")}</p>
+    <p style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginBottom:28}}>{tr("pay.desc")}</p>
+    <GoldBtn full onClick={()=>setPage("membership")}>{tr("pay.viewPlans")}</GoldBtn>
+  </Card></div>;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // IP SCAN WIDGET (#4)
@@ -757,6 +843,7 @@ function IPScanWidget(){
 // TRAVEL SECURITY — click-based flow (#8)
 // ═══════════════════════════════════════════════════════════════════
 function PgTravel(){
+  const{t:tr}=useTranslation();
   const[stage,setStage]=useState("picker");const[form,setForm]=useState({});const[loading,setLoading]=useState(false);const[result,setResult]=useState(null);
 
   const DESTINATIONS=[
@@ -786,20 +873,20 @@ function PgTravel(){
     {key:"risk_focus",type:"choice",columns:2,title:"Primary concern",desc:"We'll prioritize this in the dossier.",options:[{value:"kinetic",label:"Physical security",desc:"Crime, terrorism, unrest"},{value:"cyber",label:"Cyber & surveillance",desc:"Wi-Fi intercept, tracking"},{value:"geopolitical",label:"Geopolitical",desc:"Regional instability"},{value:"comprehensive",label:"Full spectrum",desc:"Cover everything"}]},
   ];
 
-  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Travel Security" subtitle="Pre-travel intelligence briefings. Kinetic threats, cyber risks, geopolitical context."/>
+  return <div style={{animation:"fadeIn 0.4s ease"}}><SH title={tr("module.travel.title")} subtitle={tr("module.travel.subtitle")}/>
     {stage==="picker"&&<Card style={{padding:32,textAlign:"center"}}>
       <div style={{fontSize:32,marginBottom:12}}>✈</div>
-      <div style={{fontSize:20,fontFamily:serif,fontWeight:300,marginBottom:10}}>Plan a Secure Trip</div>
-      <p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,maxWidth:440,margin:"0 auto 24px"}}>A guided briefing covering kinetic threats at your destination, Wi-Fi intercept risks at your hotel, geopolitical situation, and emergency contacts. Four quick questions.</p>
-      <GoldBtn onClick={()=>setStage("wizard")}>Begin Travel Briefing</GoldBtn>
+      <div style={{fontSize:20,fontFamily:serif,fontWeight:300,marginBottom:10}}>{tr("module.travel.planTrip")}</div>
+      <p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.6,maxWidth:440,margin:"0 auto 24px"}}>{tr("module.travel.planDesc")}</p>
+      <GoldBtn onClick={()=>setStage("wizard")}>{tr("module.travel.begin")}</GoldBtn>
     </Card>}
-    {stage==="wizard"&&<Wizard steps={steps} onComplete={submit} onCancel={()=>setStage("picker")} submitLabel="Generate Dossier"/>}
-    {stage==="loading"&&<Loader text="Compiling travel security dossier"/>}
+    {stage==="wizard"&&<Wizard steps={steps} onComplete={submit} onCancel={()=>setStage("picker")} submitLabel={tr("module.travel.generateDossier")}/>}
+    {stage==="loading"&&<Loader text={tr("module.travel.compiling")}/>}
     {stage==="result"&&<>
-      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setStage("picker");setResult(null);}}>← Plan Another Trip</GoldBtn></div>
+      <div style={{marginBottom:16}}><GoldBtn small onClick={()=>{setStage("picker");setResult(null);}}>{tr("module.travel.anotherTrip")}</GoldBtn></div>
       {result?.analysis&&<Card style={{padding:24,animation:"fadeIn 0.4s ease"}}>
-        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>PRE-TRAVEL SECURITY DOSSIER</div>
-        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>CLASSIFICATION: CONFIDENTIAL — {new Date().toLocaleString()}</div>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>{tr("module.travel.dossier")}</div>
+        <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:16}}>{tr("common.classification")} — {new Date().toLocaleString()}</div>
         <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{result.analysis}</div>
       </Card>}
       {result?.error&&<Card style={{padding:20}}><div style={{color:C.critical,fontSize:13}}>{result.error}</div></Card>}
@@ -1121,18 +1208,19 @@ function TrialGate({setPage,user}){return <div style={{animation:"fadeIn 0.4s ea
 // PRODUCT TOUR OVERLAY (#10 — guided first experience)
 // ═══════════════════════════════════════════════════════════════════
 function ProductTour({steps,onComplete,onSkip}){
+  const{t:tr}=useTranslation();
   const[idx,setIdx]=useState(0);const s=steps[idx];if(!s)return null;
   return <div style={{position:"fixed",inset:0,zIndex:9000,pointerEvents:"none"}}>
     <div style={{position:"absolute",inset:0,background:"rgba(9,9,11,0.78)",backdropFilter:"blur(2px)",animation:"fadeIn 0.3s ease",pointerEvents:"auto"}}/>
     <div style={{position:"absolute",bottom:40,left:"50%",transform:"translateX(-50%)",width:"90%",maxWidth:440,background:C.bgCard,border:`1px solid ${C.gold}`,borderRadius:6,padding:24,pointerEvents:"auto",animation:"fadeIn 0.4s ease",boxShadow:"0 20px 60px rgba(0,0,0,0.6)"}}>
-      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Step {idx+1} of {steps.length}</div>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>{tr("wiz.step")} {idx+1} {tr("wiz.of")} {steps.length}</div>
       <div style={{fontSize:18,fontFamily:serif,fontWeight:400,marginBottom:10}}>{s.title}</div>
       <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7,marginBottom:20}}>{s.desc}</p>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        <button onClick={onSkip} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,letterSpacing:"1px"}}>Skip tour</button>
+        <button onClick={onSkip} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:mono,letterSpacing:"1px"}}>{tr("common.skip")}</button>
         <div style={{display:"flex",gap:8}}>
-          {idx>0&&<GoldBtn small onClick={()=>setIdx(idx-1)}>Back</GoldBtn>}
-          {idx<steps.length-1?<GoldBtn small onClick={()=>{if(s.action)s.action();setIdx(idx+1);}}>Next →</GoldBtn>:<GoldBtn small onClick={onComplete}>Complete</GoldBtn>}
+          {idx>0&&<GoldBtn small onClick={()=>setIdx(idx-1)}>{tr("common.back")}</GoldBtn>}
+          {idx<steps.length-1?<GoldBtn small onClick={()=>{if(s.action)s.action();setIdx(idx+1);}}>{tr("common.next")} →</GoldBtn>:<GoldBtn small onClick={onComplete}>{tr("common.done")}</GoldBtn>}
         </div>
       </div>
     </div>
@@ -1306,9 +1394,186 @@ const NAV=[
   {group:"Threat Analysis",gk:"threatAnalysis",items:[{id:"predict",label:"Threat Prediction"},{id:"predictive",label:"Predictive Forecast"},{id:"insider",label:"Insider Threats"},{id:"cpir",label:"CPIR Assessment"},{id:"cases",label:"Case Management"}]},
   {group:"Family & Team",gk:"familyTeam",items:[{id:"family",label:"Family Protection"},{id:"seats",label:"Team Seats"}]},
   {group:"Personal",gk:"personal",items:[{id:"notes",label:"Notes"},{id:"reports",label:"Reports Center"}]},
+  {group:"Research & Support",gk:"research",items:[{id:"strategic",label:"Strategic Research"},{id:"issue",label:"Report an Issue"}]},
   {group:"Services",gk:"services",items:[{id:"membership",label:"Membership"},{id:"consult",label:"Consultancy"},{id:"capabilities",label:"Our Capabilities"}]},
-  {group:"System",gk:"system",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"}]},
+  {group:"System",gk:"system",items:[{id:"settings",label:"Settings"},{id:"guide",label:"User Guide"},{id:"aboutus",label:"About Us"},{id:"aboutdata",label:"About Your Data"}]},
 ];
+
+// ═══════════════════════════════════════════════════════════════════
+// STRATEGIC RESEARCH — reading library (#4)
+// ═══════════════════════════════════════════════════════════════════
+function PgStrategic({user,isAdmin}){
+  const{t:tr}=useTranslation();
+  const[reports,setReports]=useState([]);const[loading,setLoading]=useState(true);const[selected,setSelected]=useState(null);
+  const[adminMode,setAdminMode]=useState(false);
+  const load=async()=>{try{const r=await fetch("/api/strategic-reports");const d=await r.json();setReports(Array.isArray(d)?d:[]);}catch(e){setReports([]);}setLoading(false);};
+  useEffect(()=>{load();},[]);
+  const open=async(slug)=>{try{const r=await fetch(`/api/strategic-reports?slug=${slug}`);const d=await r.json();if(!d.error)setSelected(d);scrollTo(0,0);}catch(e){}};
+
+  if(selected){return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <div style={{marginBottom:16}}><GoldBtn small onClick={()=>setSelected(null)}>{tr("research.back")}</GoldBtn></div>
+    <Card style={{padding:"32px 36px"}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>{selected.category} — {selected.classification}</div>
+      <h1 style={{fontSize:32,fontFamily:serif,fontWeight:300,lineHeight:1.2,marginBottom:8}}>{selected.title}</h1>
+      {selected.subtitle&&<div style={{fontSize:14,color:C.textDim,fontWeight:200,fontStyle:"italic",marginBottom:12}}>{selected.subtitle}</div>}
+      <div style={{fontSize:10,fontFamily:mono,color:C.textDim,marginBottom:24,paddingBottom:14,borderBottom:`1px solid ${C.border}`}}>{tr("research.published")}: {new Date(selected.published_at).toLocaleDateString()}</div>
+      <div style={{fontSize:14,color:C.textSec,fontWeight:300,lineHeight:1.9,whiteSpace:"pre-wrap"}}>{selected.content}</div>
+    </Card>
+  </div>;}
+
+  if(isAdmin&&adminMode)return <StrategicAdmin onBack={()=>{setAdminMode(false);load();}}/>;
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <SH title={tr("research.title")} subtitle={tr("research.subtitle")}/>
+    {isAdmin&&<div style={{marginBottom:16}}><GoldBtn small onClick={()=>setAdminMode(true)}>⚙ Admin — Manage Reports</GoldBtn></div>}
+    {loading&&<Loader text={tr("common.loading")}/>}
+    {!loading&&reports.length===0&&<Card style={{padding:32,textAlign:"center"}}><div style={{fontSize:12,color:C.textDim,fontWeight:200}}>{tr("research.none")}</div></Card>}
+    <div className="sg2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+      {reports.map(r=><Card key={r.id} style={{padding:22,cursor:"pointer",transition:"border-color 0.2s"}} onClick={()=>open(r.slug)} onMouseEnter={e=>e.currentTarget.style.borderColor=C.gold} onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>{r.category} — {r.classification}</div>
+        <div style={{fontSize:18,fontFamily:serif,fontWeight:400,lineHeight:1.3,marginBottom:8}}>{r.title}</div>
+        {r.subtitle&&<div style={{fontSize:12,color:C.textDim,fontWeight:200,fontStyle:"italic",marginBottom:10}}>{r.subtitle}</div>}
+        {r.summary&&<div style={{fontSize:12,color:C.textSec,fontWeight:200,lineHeight:1.6,marginBottom:12}}>{r.summary}</div>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:10,fontFamily:mono,color:C.textDim}}>{new Date(r.published_at).toLocaleDateString()}</span>
+          <span style={{fontSize:10,fontFamily:mono,color:C.gold,letterSpacing:"1.5px"}}>{tr("research.read")} →</span>
+        </div>
+      </Card>)}
+    </div>
+  </div>;
+}
+
+// Admin-only Strategic Research manager
+function StrategicAdmin({onBack}){
+  const[all,setAll]=useState([]);const[editing,setEditing]=useState(null);const[form,setForm]=useState({});const[saving,setSaving]=useState(false);
+  const load=async()=>{try{const r=await fetch("/api/strategic-reports/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"list_all"})});const d=await r.json();setAll(Array.isArray(d)?d:[]);}catch(e){setAll([]);}};
+  useEffect(()=>{load();},[]);
+
+  const newReport=()=>{setEditing("new");setForm({title:"",slug:"",subtitle:"",category:"analysis",classification:"UNCLASSIFIED",content:"",summary:"",published:false});};
+  const editReport=(r)=>{setEditing(r.id);setForm({...r,tags:(r.tags||[]).join(", ")});};
+  const save=async()=>{
+    setSaving(true);
+    const report={...form,tags:(typeof form.tags==="string"?form.tags.split(",").map(s=>s.trim()).filter(Boolean):form.tags||[])};
+    const action=editing==="new"?"create":"update";
+    if(editing!=="new")report.id=editing;
+    try{await fetch("/api/strategic-reports/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,report})});setEditing(null);load();}catch(e){}
+    setSaving(false);
+  };
+  const del=async(id)=>{if(!confirm("Delete this report?"))return;await fetch("/api/strategic-reports/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",report:{id}})});load();};
+
+  if(editing){return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <div style={{marginBottom:14}}><GoldBtn small onClick={()=>setEditing(null)}>← Back to list</GoldBtn></div>
+    <SH title={editing==="new"?"New Strategic Report":"Edit Report"} subtitle="Reports become visible to all authenticated users once published."/>
+    <Card style={{padding:28}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Inp label="Title" placeholder="Strategic outlook Q2 2026: ..." value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})}/>
+        <Inp label="Slug (URL segment)" placeholder="q2-2026-outlook" value={form.slug||""} onChange={e=>setForm({...form,slug:e.target.value})} mono/>
+        <Inp label="Subtitle (optional)" placeholder="A short italic line under the title" value={form.subtitle||""} onChange={e=>setForm({...form,subtitle:e.target.value})}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}} className="sg2">
+          <Dropdown label="Category" value={form.category||"analysis"} onChange={v=>setForm({...form,category:v})} options={[{value:"analysis",label:"Analysis"},{value:"briefing",label:"Briefing"},{value:"forecast",label:"Forecast"},{value:"whitepaper",label:"Whitepaper"},{value:"case_study",label:"Case Study"}]}/>
+          <Dropdown label="Classification" value={form.classification||"UNCLASSIFIED"} onChange={v=>setForm({...form,classification:v})} options={[{value:"UNCLASSIFIED",label:"Unclassified"},{value:"CONFIDENTIAL",label:"Confidential"},{value:"RESTRICTED",label:"Restricted"}]}/>
+        </div>
+        <Inp label="Summary (short teaser)" placeholder="2-3 sentences shown on the report card" value={form.summary||""} onChange={e=>setForm({...form,summary:e.target.value})} area/>
+        <Inp label="Content (Markdown or plain text)" placeholder="Full report content..." value={form.content||""} onChange={e=>setForm({...form,content:e.target.value})} area/>
+        <Inp label="Tags (comma-separated)" placeholder="cyber, middle east, supply chain" value={form.tags||""} onChange={e=>setForm({...form,tags:e.target.value})}/>
+        <div onClick={()=>setForm({...form,published:!form.published})} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 0"}}>
+          <span style={{width:18,height:18,border:`1.5px solid ${form.published?C.gold:C.border}`,borderRadius:3,background:form.published?C.gold:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{form.published&&<span style={{color:C.bg,fontSize:12,fontWeight:700}}>✓</span>}</span>
+          <span style={{fontSize:13,color:C.text}}>Publish (visible to users)</span>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <GoldBtn small onClick={()=>setEditing(null)}>Cancel</GoldBtn>
+          <GoldBtn onClick={save} disabled={saving||!form.title?.trim()}>{saving?"Saving...":"Save"}</GoldBtn>
+        </div>
+      </div>
+    </Card>
+  </div>;}
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <div style={{marginBottom:14}}><GoldBtn small onClick={onBack}>← Back to public view</GoldBtn></div>
+    <SH title="Strategic Research — Admin" subtitle="Create, edit, and publish long-form intelligence reports."/>
+    <div style={{marginBottom:16}}><GoldBtn onClick={newReport}>+ New Report</GoldBtn></div>
+    <Card style={{padding:20}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:14}}>All Reports ({all.length})</div>
+      {all.length===0&&<div style={{fontSize:12,color:C.textDim,fontWeight:200,padding:"20px 0",textAlign:"center"}}>No reports yet.</div>}
+      {all.map((r,i)=><div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:i>0?`1px solid ${C.border}`:"none",gap:10,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontSize:13,marginBottom:3}}>{r.title}</div>
+          <div style={{fontSize:10,fontFamily:mono,color:C.textDim}}>{r.slug} — {r.category} — {r.classification} — {new Date(r.created_at).toLocaleDateString()}</div>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <Badge severity={r.published?"low":"info"} label={r.published?"PUBLISHED":"DRAFT"}/>
+          <GoldBtn small onClick={()=>editReport(r)}>Edit</GoldBtn>
+          <GoldBtn small danger onClick={()=>del(r.id)}>Delete</GoldBtn>
+        </div>
+      </div>)}
+    </Card>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REPORT AN ISSUE (#3)
+// ═══════════════════════════════════════════════════════════════════
+function PgIssue(){
+  const{t:tr}=useTranslation();
+  const[stage,setStage]=useState("form");const[type,setType]=useState("");const[details,setDetails]=useState("");const[loading,setLoading]=useState(false);
+  const submit=async()=>{if(!type||!details.trim())return;setLoading(true);
+    try{await fetch("/api/issue",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({issue_type:type,details})});setStage("done");}catch(e){}setLoading(false);};
+
+  return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <SH title={tr("issue.title")} subtitle={tr("issue.subtitle")}/>
+    {stage==="form"&&<Card style={{padding:28,maxWidth:620}}>
+      <div style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase",marginBottom:10}}>{tr("issue.type")}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}} className="sg2">
+        {[{v:"bug",l:tr("issue.typeBug")},{v:"feature",l:tr("issue.typeFeature")},{v:"billing",l:tr("issue.typeBilling")},{v:"account",l:tr("issue.typeAccount")},{v:"other",l:tr("issue.typeOther")}].map(o=>
+          <div key={o.v} onClick={()=>setType(o.v)} style={{padding:"12px 14px",border:`1px solid ${type===o.v?C.gold:C.border}`,borderRadius:3,background:type===o.v?C.goldDim:C.bgInput,cursor:"pointer",fontSize:12,color:type===o.v?C.gold:C.text,fontWeight:type===o.v?500:300,textAlign:"center"}}>{o.l}</div>)}
+      </div>
+      <Inp label={tr("issue.details")} placeholder={tr("issue.detailsPlaceholder")} value={details} onChange={e=>setDetails(e.target.value)} area style={{minHeight:140}}/>
+      <div style={{marginTop:16}}><GoldBtn full onClick={submit} disabled={loading||!type||!details.trim()}>{loading?tr("common.processing"):tr("issue.submit")}</GoldBtn></div>
+      <p style={{fontSize:10,color:C.textDim,fontWeight:200,marginTop:10,lineHeight:1.5}}>Your report is sent directly to our team. We review every submission. Response will be sent to the email address on your account.</p>
+    </Card>}
+    {stage==="done"&&<Card style={{padding:40,textAlign:"center",maxWidth:520,margin:"0 auto",borderColor:"rgba(107,158,122,0.3)"}}>
+      <div style={{fontSize:40,color:C.low,marginBottom:14}}>✓</div>
+      <div style={{fontSize:22,fontFamily:serif,fontWeight:300,marginBottom:10}}>{tr("issue.submitted")}</div>
+      <p style={{fontSize:13,color:C.textDim,fontWeight:200,lineHeight:1.7,marginBottom:20}}>{tr("issue.submittedDesc")}</p>
+      <GoldBtn small onClick={()=>{setStage("form");setType("");setDetails("");}}>{tr("common.done")}</GoldBtn>
+    </Card>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ABOUT US / ABOUT YOUR DATA — in-app view (reads from static pages concept)
+// ═══════════════════════════════════════════════════════════════════
+function PgAboutUs(){
+  const{t:tr}=useTranslation();
+  return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <SH title={tr("about.title")} subtitle={tr("about.subtitle")}/>
+    <Card style={{padding:"28px 32px",maxWidth:780}}>
+      <div style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.85,marginBottom:16}}>Spy by Atlas is the intelligence platform built by Atlas Design Institute — an independent practice combining operational intelligence methodology with modern engineering. We are not a technology company that added intelligence features. We are intelligence practitioners who built the platform we wished existed for the private sector.</div>
+      <div style={{background:C.goldDim,border:`1px solid ${C.gold}30`,borderRadius:4,padding:"18px 22px",marginBottom:18}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Our Purpose</div>
+        <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7,margin:0}}>Intelligence capabilities that were once the domain of governments and large corporations have become essential for individuals, families, and businesses operating in a hostile digital environment. We make those capabilities accessible — properly designed, professionally operated, priced within reach.</p>
+      </div>
+      <div style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginTop:14,textAlign:"center"}}>For the full company page, visit <a href="/about" target="_blank" style={{color:C.gold}}>atlasspy.com/about</a></div>
+    </Card>
+  </div>;
+}
+
+function PgAboutData(){
+  const{t:tr}=useTranslation();
+  return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <SH title={tr("aboutdata.title")} subtitle={tr("aboutdata.subtitle")}/>
+    <Card style={{padding:"28px 32px",maxWidth:780}}>
+      <div style={{background:C.goldDim,border:`1px solid ${C.gold}30`,borderRadius:4,padding:"18px 22px",marginBottom:22}}>
+        <div style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>The Principle</div>
+        <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7,margin:0}}>Your data belongs to you. We collect only what we need to operate the service you paid for. We do not sell it. We do not correlate it. We do not use your queries to train AI models.</p>
+      </div>
+      <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.75,marginBottom:12}}><strong style={{color:C.text}}>Encryption everywhere.</strong> Your data is encrypted in transit (TLS 1.3) and at rest (AES-256). Passwords are hashed using modern cryptographic standards — we never have access to your plain-text password.</p>
+      <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.75,marginBottom:12}}><strong style={{color:C.text}}>Isolated by design.</strong> The database enforces Row-Level Security — no account can read another account's data at any level. Reports and notes are visible only to you.</p>
+      <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.75,marginBottom:12}}><strong style={{color:C.text}}>Your rights are honored universally.</strong> Whether you live in the EU, California, Türkiye, or anywhere else, you can request access, rectification, erasure, portability, restriction, objection, or consent withdrawal. We respond within 30 days.</p>
+      <div style={{fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.6,marginTop:18,textAlign:"center"}}>For the full data policy, visit <a href="/about-your-data" target="_blank" style={{color:C.gold}}>atlasspy.com/about-your-data</a></div>
+    </Card>
+  </div>;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // DASHBOARD
@@ -1342,6 +1607,8 @@ export default function SpyDashboard({user,isDemo}){
   const[accountType,setAccountType]=useState(user?.account_type||null);
   const[lang,setLangState]=useState("en");
   const[showTour,setShowTour]=useState(false);
+  const[cmdOpen,setCmdOpen]=useState(false);
+  const{toast,ToastHost}=useToast();
   const router=useRouter();
   const tier=user?.tier||"observer";
   const subActive=isDemo||user?.subscription_status==="active"||user?.subscription_status==="trial";
@@ -1352,6 +1619,15 @@ export default function SpyDashboard({user,isDemo}){
   useEffect(()=>{setLangState(getLang());const h=()=>setLangState(getLang());window.addEventListener("langchange",h);return()=>window.removeEventListener("langchange",h);},[]);
   useEffect(()=>{if(typeof document!=="undefined")document.documentElement.lang=lang;},[lang]);
   const tr=(k)=>T(k,lang);
+
+  // Global keyboard shortcuts (I2): Cmd+K / Ctrl+K opens palette
+  useEffect(()=>{
+    const h=(e)=>{
+      if((e.metaKey||e.ctrlKey)&&e.key==="k"){e.preventDefault();setCmdOpen(true);}
+      if(e.key==="Escape")setCmdOpen(false);
+    };
+    window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);
+  },[]);
 
   const handleSignOut=async()=>{if(isDemo){router.push("/");return;}const sb=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);await sb.auth.signOut();router.push("/");router.refresh();};
 
@@ -1444,6 +1720,10 @@ export default function SpyDashboard({user,isDemo}){
       contextOptions={[{value:"opening",label:"Opening a new case"},{value:"mid_investigation",label:"Mid-investigation checkpoint"},{value:"closure",label:"Closure & recommendations"}]}/>;
     case"cpir":return <PgCPIR/>;
     case"notes":return <PgNotes/>;
+    case"strategic":return <PgStrategic user={user} isAdmin={user?.email===(process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com")}/>;
+    case"issue":return <PgIssue/>;
+    case"aboutus":return <PgAboutUs/>;
+    case"aboutdata":return <PgAboutData/>;
     case"suppress":return <PgInvisible/>;
     case"capabilities":return <PgCapabilities/>;
     case"membership":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="Membership" subtitle="Start your 7-day free trial. Full access. Cancel anytime."/>
@@ -1502,7 +1782,7 @@ export default function SpyDashboard({user,isDemo}){
           </div>)}
         </nav>
         <div style={{padding:"6px 5px",borderTop:`1px solid ${C.border}`}}>
-          <button onClick={handleSignOut} style={{display:"flex",alignItems:"center",padding:collapsed?"6px":"6px 10px",border:"none",cursor:"pointer",background:"transparent",width:"100%",color:C.textDim,fontSize:11,fontFamily:sans,borderRadius:3,justifyContent:collapsed?"center":"flex-start",fontWeight:200}}>{collapsed?"×":isDemo?tr("btn.exitDemo"):tr("btn.signOut")}</button>
+          <button onClick={handleSignOut} style={{display:"flex",alignItems:"center",padding:collapsed?"6px":"6px 10px",border:"none",cursor:"pointer",background:"transparent",width:"100%",color:C.textDim,fontSize:11,fontFamily:sans,borderRadius:3,justifyContent:collapsed?"center":"flex-start",fontWeight:200}}>{collapsed?"×":isDemo?tr("common.exitDemo"):tr("common.signOut")}</button>
         </div>
       </aside>
       <main style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
@@ -1511,7 +1791,9 @@ export default function SpyDashboard({user,isDemo}){
             <button className="smt" onClick={()=>setMobileNav(!mobileNav)} style={{display:"none",alignItems:"center",justifyContent:"center",width:30,height:30,border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.gold,cursor:"pointer",fontSize:13}}>☰</button>
             <span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>{(()=>{const item=NAV.flatMap(g=>g.items).find(n=>n.id===page);return item?tr("nav."+item.id):tr("nav.dash");})()}</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            {subActive&&<ThreatPulse user={user}/>}
+            <button onClick={()=>setCmdOpen(true)} title="Command palette (Cmd+K)" style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.textDim,fontSize:10,fontFamily:mono,letterSpacing:"1px",cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.color=C.gold;e.currentTarget.style.borderColor=C.gold+"60";}} onMouseLeave={e=>{e.currentTarget.style.color=C.textDim;e.currentTarget.style.borderColor=C.border;}}>⌕ ⌘K</button>
             <div style={{minWidth:80}}><Dropdown small align="right" value={lang} onChange={v=>{setLang(v);setLangState(v);}} options={LANGS.map(l=>({value:l.code,label:l.code.toUpperCase()+" — "+l.name}))}/></div>
             <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPageScroll("settings")} title={tr("nav.settings")}>
               <div style={{width:24,height:24,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.border}`,fontSize:10,fontFamily:serif,color:C.gold}}>{(user?.name||"O")[0]}</div>
@@ -1524,5 +1806,8 @@ export default function SpyDashboard({user,isDemo}){
           <span style={{display:"flex",alignItems:"center",gap:6,fontSize:8,fontFamily:mono,color:C.textDim}}><span style={{width:4,height:4,borderRadius:"50%",background:C.low,animation:"glow 3s infinite"}}/>{tr("footer.encrypted")}</span>
         </footer>
       </main>
-    </div></>;
+    </div>
+    <ToastHost/>
+    <CommandPalette open={cmdOpen} onClose={()=>setCmdOpen(false)} onSelect={(id)=>{navClick(id);toast(`${tr("nav."+id)||id}`,"info");}} navItems={NAV.flatMap(g=>g.items.map(i=>({...i,label:tr("nav."+i.id)||i.label,group:tr("nav."+g.gk)||g.group})))}/>
+    </>;
 }
