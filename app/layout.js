@@ -1,10 +1,10 @@
 export const metadata = {
-  metadataBase: new URL("https://atlasspy.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://atlasspy.com"),
   title: {
-    default: "Spy by Atlas — Private Intelligence Platform | Atlas Intelligence",
-    template: "%s | Spy by Atlas",
+    default: "Atlas Intelligence — Daily Briefs & Private Intelligence Platform",
+    template: "%s | Atlas Intelligence",
   },
-  description: "Spy by Atlas is a private intelligence-as-a-service platform. OSINT research, threat monitoring, breach detection, executive protection, dark web intelligence, and predictive threat forecasting. Designed and operated by intelligence professionals.",
+  description: "Daily intelligence briefs and a private platform. Cyber, geopolitical, and risk analysis for executives, principals, and the people they protect.",
   keywords: [
     "intelligence platform", "private intelligence", "OSINT", "open source intelligence",
     "threat intelligence", "cybersecurity intelligence", "digital footprint", "breach monitoring",
@@ -15,6 +15,7 @@ export const metadata = {
     "privacy protection", "identity verification", "fraud detection", "supply chain intelligence",
     "travel security", "intelligence as a service", "IaaS", "atlas", "atlasspy",
     "social media monitoring", "reputation management", "digital security platform",
+    "intelligence brief", "geopolitical analysis", "cyber threat brief",
   ],
   authors: [{ name: "Atlas Design Institute" }],
   creator: "Atlas Design Institute",
@@ -30,14 +31,14 @@ export const metadata = {
     type: "website",
     locale: "en_US",
     url: "https://atlasspy.com",
-    siteName: "Spy by Atlas",
-    title: "Spy by Atlas — Private Intelligence Platform",
-    description: "Know everything. Before everyone. A private intelligence platform designed by intelligence professionals.",
-    images: [{ url: "/favicon.svg", width: 512, height: 512, alt: "Spy by Atlas" }],
+    siteName: "Atlas Intelligence",
+    title: "Atlas Intelligence — Daily Briefs & Private Platform",
+    description: "Know everything. Before everyone. Daily briefs and a private intelligence platform for principals.",
+    images: [{ url: "/favicon.svg", width: 512, height: 512, alt: "Atlas Intelligence" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Spy by Atlas — Private Intelligence Platform",
+    title: "Atlas Intelligence — Daily Briefs",
     description: "Know everything. Before everyone.",
     images: ["/favicon.svg"],
   },
@@ -47,28 +48,25 @@ export const metadata = {
   },
   alternates: {
     canonical: "https://atlasspy.com",
-    languages: {
-      "en-US": "https://atlasspy.com",
-      "fr-FR": "https://atlasspy.com?lang=fr",
-      "de-DE": "https://atlasspy.com?lang=de",
+    types: {
+      "application/rss+xml": [{ url: "/api/feed.xml", title: "Atlas Intelligence — Daily Briefs" }],
     },
   },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Spy by Atlas",
-  "alternateName": ["Atlas Spy", "Atlas Intelligence", "Spy Platform"],
-  "applicationCategory": "SecurityApplication",
-  "operatingSystem": "Web",
-  "description": "Private intelligence-as-a-service platform. OSINT, threat monitoring, breach detection, executive protection.",
-  "url": "https://atlasspy.com",
-  "publisher": { "@type": "Organization", "name": "Atlas Design Institute", "url": "https://atlasspy.com" },
-  "offers": [
-    { "@type": "Offer", "name": "Personal Pro", "price": "49.00", "priceCurrency": "USD" },
-    { "@type": "Offer", "name": "Business Premium", "price": "149.00", "priceCurrency": "USD" },
-  ],
+  "@type": "Organization",
+  name: "Atlas Intelligence",
+  alternateName: ["Atlas Design Institute", "Spy by Atlas", "Atlas Spy"],
+  url: "https://atlasspy.com",
+  logo: "https://atlasspy.com/favicon.svg",
+  description: "Private intelligence-as-a-service. Daily briefs, OSINT, threat monitoring, breach detection, executive protection.",
+  sameAs: [
+    process.env.NEXT_PUBLIC_TWITTER_URL,
+    process.env.NEXT_PUBLIC_INSTAGRAM_URL,
+    process.env.NEXT_PUBLIC_LINKEDIN_URL,
+  ].filter(Boolean),
 };
 
 export default function RootLayout({ children }) {
@@ -78,6 +76,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Raleway:wght@200;300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+        <link rel="alternate" type="application/rss+xml" title="Atlas Intelligence — Daily Briefs" href="/api/feed.xml" />
         <meta name="theme-color" content="#09090b" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
