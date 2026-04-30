@@ -388,7 +388,8 @@ function PgBreaches({user,isDemo}){
   const[tab,setTab]=useState("scan");const[email,setEmail]=useState(user?.email||"");const[scanning,setScanning]=useState(false);const[result,setResult]=useState(null);
   // Admin upload state
   const[uploadForm,setUploadForm]=useState({source_name:"",breach_date:"",data_types:"",total_records:"",severity:"high",raw_data:"",emails:""});const[uploading,setUploading]=useState(false);const[uploadResult,setUploadResult]=useState("");
-  const isAdmin=user?.email==="atlasalpaytr@gmail.com";
+    const ADMIN_EMAILS=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase());
+  const isAdmin=user?.email&&ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   const scan=async()=>{if(!email.trim()||isDemo)return;setScanning(true);setResult(null);
     try{const r=await fetch("/api/breach-db",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});setResult(await r.json());}catch(e){}setScanning(false);};
@@ -1720,7 +1721,7 @@ export default function SpyDashboard({user,isDemo}){
       contextOptions={[{value:"opening",label:"Opening a new case"},{value:"mid_investigation",label:"Mid-investigation checkpoint"},{value:"closure",label:"Closure & recommendations"}]}/>;
     case"cpir":return <PgCPIR/>;
     case"notes":return <PgNotes/>;
-    case"strategic":return <PgStrategic user={user} isAdmin={user?.email===(process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com")}/>;
+    case"strategic":{const ae=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase());return <PgStrategic user={user} isAdmin={user?.email&&ae.includes(user.email.toLowerCase())}/>;}
     case"issue":return <PgIssue/>;
     case"aboutus":return <PgAboutUs/>;
     case"aboutdata":return <PgAboutData/>;
@@ -1795,6 +1796,24 @@ export default function SpyDashboard({user,isDemo}){
             {subActive&&<ThreatPulse user={user}/>}
             <button onClick={()=>setCmdOpen(true)} title="Command palette (Cmd+K)" style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.textDim,fontSize:10,fontFamily:mono,letterSpacing:"1px",cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.color=C.gold;e.currentTarget.style.borderColor=C.gold+"60";}} onMouseLeave={e=>{e.currentTarget.style.color=C.textDim;e.currentTarget.style.borderColor=C.border;}}>⌕ ⌘K</button>
             <div style={{minWidth:80}}><Dropdown small align="right" value={lang} onChange={v=>{setLang(v);setLangState(v);}} options={LANGS.map(l=>({value:l.code,label:l.code.toUpperCase()+" — "+l.name}))}/></div>
+                                                                                            
+            {isAdmin && (
+<a
+    href="/admin"
+    title="Admin"
+    style={{
+      width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center",
+      border: `1px solid ${C.border}`, borderRadius: 4, color: C.textDim, textDecoration: "none",
+      fontSize: 11, fontFamily: mono,
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.color = C.gold; e.currentTarget.style.borderColor = C.gold; }}
+    onMouseLeave={(e) => { e.currentTarget.style.color = C.textDim; e.currentTarget.style.borderColor = C.border; }}
+  >
+    ⚙
+  </a>
+)}
+
+                                                                                            
             <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPageScroll("settings")} title={tr("nav.settings")}>
               <div style={{width:24,height:24,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.border}`,fontSize:10,fontFamily:serif,color:C.gold}}>{(user?.name||"O")[0]}</div>
             </div>
