@@ -1,17 +1,22 @@
 "use client";
-// components/HomeHero.js — REVISION 3
+// components/HomeHero.js — REVISION 3.1
 //
-// CHANGES:
-//   • Globe ≥ 60% visible — globe sits in a 50/50 grid, never cropped beyond
-//     visual sense. Atmospheric backdrop carries the cinematic feel that the
-//     yellow halo used to provide.
-//   • F-pattern typography — eye lands on a powerful first line (top-left),
-//     scans right, then drops to second line, then descends to body. The
-//     hero copy deliberately follows the "promise → mechanism → CTA" order
-//     that high-converting landing pages use.
-//   • "Open Free Account" CTA goes to /signup (item 7).
-//   • Trust strip below the fold — small chips signaling capabilities, with
-//     gold dividers — gives a hint of platform depth before they scroll.
+// CHANGE: globe now sits in a viewport-edge container, not a grid cell.
+// Previously the globe was inside a 1.1fr grid cell with overflow:hidden,
+// which clipped it to that cell's right edge. Now the globe lives in an
+// absolutely-positioned container fixed to the right of the section, so
+// it's bounded by the actual screen edge — and can spill ~30% off-screen
+// while keeping ≥60% of the sphere visible.
+//
+// Structure:
+//   <section position:relative>                          ← bound to viewport
+//     <div absolute right:0 width:60vw>                  ← globe column
+//       <AtlasGlobe />
+//     </div>
+//     <div max-width:1320 padding>                       ← copy column on top
+//       <div max-width:580>...hero text...</div>
+//     </div>
+//   </section>
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -69,31 +74,70 @@ export default function HomeHero({ visitor, lead }) {
     <section
       style={{
         position: "relative",
-        overflow: "hidden",
+        overflow: "hidden",                     // bound to viewport
         borderBottom: `1px solid ${C.border}`,
+        minHeight: isMobile ? "auto" : 720,
       }}
     >
-      {/* Atmospheric backdrop — replaces what the globe halo used to do */}
+      {/* Atmospheric backdrop layers */}
       <div style={{ position: "absolute", inset: 0, opacity: 0.025, backgroundImage: `radial-gradient(${C.gold} 1px, transparent 1px)`, backgroundSize: "44px 44px", pointerEvents: "none" }} />
       <div style={{ position: "absolute", top: -200, right: -200, width: 800, height: 800, background: "radial-gradient(circle, rgba(196,162,101,0.05) 0%, transparent 65%)", filter: "blur(80px)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: -300, left: -200, width: 700, height: 700, background: "radial-gradient(circle, rgba(124,141,181,0.03) 0%, transparent 60%)", filter: "blur(100px)", pointerEvents: "none" }} />
 
+      {/* GLOBE — absolutely positioned against the viewport's right edge.
+          On desktop: 62vw wide column starting at right:0. The globe inside
+          uses crop="right" with a small camera shift so the sphere sits on
+          the right side of this container. The container's overflow is the
+          section's overflow (hidden) — i.e., the actual viewport edge clips
+          the globe, not a fixed box.
+          On mobile: stays a self-contained ambient backdrop, smaller and
+          centred-ish behind the copy. */}
+      {!isMobile ? (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: 0, right: 0,
+            height: "100%",
+            width: "62vw",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        >
+          <AtlasGlobe
+            userLocation={visitor}
+            crop="right"
+            height={760}
+            scale={1.4}
+          />
+        </div>
+      ) : (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -40, right: -100,
+            width: 380, height: 380,
+            opacity: 0.5,
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        >
+          <AtlasGlobe userLocation={visitor} crop="none" height={380} scale={1.0} />
+        </div>
+      )}
+
+      {/* COPY COLUMN — sits on top of the globe layer, constrained to left half */}
       <div
         style={{
           maxWidth: 1320,
           margin: "0 auto",
-          padding: isMobile ? "60px 28px 80px" : "90px 48px 100px",
+          padding: isMobile ? "60px 28px 80px" : "100px 48px 100px",
           position: "relative",
           zIndex: 2,
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1fr",
-          gap: isMobile ? 40 : 60,
-          alignItems: "center",
         }}
       >
-        {/* COPY COLUMN — F-pattern: top-left eyepath */}
-        <div>
-          {/* Top-left chip — the first thing the eye notices */}
+        <div style={{ maxWidth: isMobile ? "100%" : 580 }}>
           {visitor && (
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 10,
@@ -108,14 +152,11 @@ export default function HomeHero({ visitor, lead }) {
             </div>
           )}
 
-          {/* Eyebrow — establishes brand authority before headline */}
           <div style={{ fontSize: 11, fontFamily: mono, letterSpacing: 4, color: C.gold, textTransform: "uppercase", marginBottom: 18 }}>
             Atlas Intelligence — Private Intelligence Platform
           </div>
 
-          {/* HEADLINE — top-left → scan-right F-pattern. The accent line
-              ("on what's actually happening") is positioned where the eye
-              naturally stops second. */}
+          {/* F-pattern headline */}
           <h1 style={{
             fontFamily: serif,
             fontSize: "clamp(42px, 6.4vw, 88px)",
@@ -128,15 +169,13 @@ export default function HomeHero({ visitor, lead }) {
             <em style={{ color: C.gold, fontWeight: 400 }}>Act ahead.</em>
           </h1>
 
-          {/* DEK — the mechanism. Explains what the platform IS before they scroll. */}
           <p style={{
             fontSize: 18, color: C.textSec, fontWeight: 300,
-            lineHeight: 1.6, maxWidth: 560, margin: "0 0 14px",
+            lineHeight: 1.6, maxWidth: 540, margin: "0 0 14px",
           }}>
             <strong style={{ color: C.text, fontWeight: 400 }}>An intelligence platform built by intelligence professionals.</strong> Daily briefs are the floor. The platform is the ceiling — OSINT search, continuous breach monitoring, executive protection, dark-web watch, and a senior analyst on call.
           </p>
 
-          {/* Sub-dek — pricing reassurance. Removes the "is this expensive?" friction. */}
           <p style={{
             fontSize: 14, color: C.textDim, fontWeight: 300,
             lineHeight: 1.55, maxWidth: 540, margin: "0 0 32px",
@@ -144,7 +183,6 @@ export default function HomeHero({ visitor, lead }) {
             Free to read. Free to start. From $39/mo when you need the full platform.
           </p>
 
-          {/* CTAs — primary action is the platform. Secondary is the brief. */}
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 32 }}>
             <Link href="/signup" style={{
               padding: "15px 30px", background: C.gold, color: C.bg, border: `1px solid ${C.gold}`,
@@ -162,7 +200,6 @@ export default function HomeHero({ visitor, lead }) {
             </Link>
           </div>
 
-          {/* Trust strip — quietly hints that this is more than a brief site */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", maxWidth: 600 }}>
             <span style={{ fontSize: 10, fontFamily: mono, color: C.textDim, letterSpacing: 1.5, textTransform: "uppercase", marginRight: 4 }}>
               Inside:
@@ -179,22 +216,15 @@ export default function HomeHero({ visitor, lead }) {
             ))}
           </div>
         </div>
-
-        {/* GLOBE COLUMN — sits right, ≥ 60% visible */}
-        <div style={{ position: "relative" }}>
-          <AtlasGlobe
-            userLocation={visitor}
-            crop={isMobile ? "none" : "right"}
-            height={isMobile ? 380 : 560}
-            scale={isMobile ? 1.0 : 1.4}
-          />
-        </div>
       </div>
 
-      {/* Tiny stat strip below the hero — quiet, informational */}
+      {/* Stat strip at the very bottom of the hero */}
       <div style={{
+        position: "relative",
+        zIndex: 2,
         borderTop: `1px solid ${C.border}`,
-        background: "rgba(0,0,0,0.3)",
+        background: "rgba(0,0,0,0.4)",
+        backdropFilter: "blur(10px)",
         padding: "14px 48px",
         display: "flex", justifyContent: "center", alignItems: "center", gap: 32,
         flexWrap: "wrap",

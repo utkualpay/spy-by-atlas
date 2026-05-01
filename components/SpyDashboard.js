@@ -1671,6 +1671,11 @@ export default function SpyDashboard({user,isDemo}){
   const subActive=isDemo||user?.subscription_status==="active"||user?.subscription_status==="trial";
   const trialNeedsCard=!isDemo&&user?.trial_started_at&&!user?.card_on_file&&user?.subscription_status!=="active";
   const mainRef=useRef(null);
+  // Admin check — env-driven, used by the discrete ⚙ icon in the top bar.
+  // Trust user.is_admin (set server-side in app/app/page.js) but also do a
+  // direct env check as a fallback for cases where the prop isn't present.
+  const ADMIN_EMAILS_LIST=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase()).filter(Boolean);
+  const isAdmin=!!user?.is_admin||(user?.email&&ADMIN_EMAILS_LIST.includes(String(user.email).toLowerCase()));
 
   // Language
   useEffect(()=>{setLangState(getLang());const h=()=>setLangState(getLang());window.addEventListener("langchange",h);return()=>window.removeEventListener("langchange",h);},[]);

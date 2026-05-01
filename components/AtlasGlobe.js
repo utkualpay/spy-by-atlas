@@ -91,10 +91,12 @@ export default function AtlasGlobe({
 
       const camera = new THREE.PerspectiveCamera(36, w / h, 0.1, 100);
 
-      // Camera shift — much smaller than rev2 so ≥60% of the sphere stays visible.
-      // crop="right" → globe centre offset slightly to the right beyond view
-      // edge, but we shift only ~20% of the radius (was 55% in rev2).
-      const horizontalShift = isMobile ? 0 : (crop === "right" ? -0.22 : crop === "left" ? 0.22 : 0);
+      // Camera shift — tuned for HomeHero's viewport-edge container.
+      // The globe canvas is anchored to right:0 of the section, so its
+      // right edge IS the viewport edge. With shift -0.30, globe centre
+      // sits roughly 70% across the canvas — ~65% of the sphere visible,
+      // right ~35% spills off the actual screen edge.
+      const horizontalShift = isMobile ? 0 : (crop === "right" ? -0.30 : crop === "left" ? 0.30 : 0);
       const cameraDistance = isMobile ? 5.0 : 4.4;
       camera.position.set(horizontalShift * cameraDistance, 0.25, cameraDistance);
       camera.lookAt(horizontalShift * cameraDistance, 0, 0);
