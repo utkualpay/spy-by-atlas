@@ -1,0 +1,32 @@
+{
+  "name": "Atlas Intelligence",
+  "short_name": "Atlas Spy",
+  "description": "Private intelligence platform. Daily briefs, OSINT, breach monitoring, executive protection.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#c4a265",
+  "orientation": "portrait-primary",
+  "categories": ["security", "news", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Brief",
+      "short_name": "Brief",
+      "description": "Read today's intelligence brief",
+      "url": "/intelligence"
+    },
+    {
+      "name": "Open Platform",
+      "short_name": "Platform",
+      "url": "/app"
+    }
+  ]
+}
