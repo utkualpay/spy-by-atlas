@@ -1,6 +1,15 @@
-// app/page.js
-// The new home. Plaza-feel: ticker, atrium, globe, brief feed, conversion.
-// Server component fetches latest articles + visitor location from Vercel headers.
+// app/page.js — REVISION 3
+//
+// Restructured homepage to address item 1 (showcase platform capabilities).
+// New section order:
+//   1. Hero (atmospheric, brand-establishing)
+//   2. Platform Showcase (the new section — 23 modules visible)
+//   3. Today's Lead Brief (the daily content hook)
+//   4. Recent briefs grid (continuity)
+//   5. Newsletter signup (the conversion ladder)
+//
+// The platform showcase is now the SECOND thing visitors see, immediately
+// after the hero, so no one can miss the depth of capability.
 
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -10,21 +19,25 @@ import PublicFooter from "@/components/PublicFooter";
 import AtlasTicker from "@/components/AtlasTicker";
 import ArticleCard from "@/components/ArticleCard";
 import HomeHero from "@/components/HomeHero";
+import PlatformShowcase from "@/components/PlatformShowcase";
+import SocialProof from "@/components/SocialProof";
 import FooterSubscribe from "@/components/FooterSubscribe";
 
 export const dynamic = "force-dynamic";
 
-const C = { gold: "#c4a265", goldDim: "rgba(196,162,101,0.10)", text: "#e4e0d9", textSec: "#9d9890", textDim: "#5c5854", border: "#1f1f25", bg: "#09090b", bgCard: "#131316" };
-const serif = "'Cormorant Garamond',serif";
-const mono = "'IBM Plex Mono',monospace";
+const C = {
+  gold: "#c4a265", text: "#e4e0d9", textSec: "#9d9890", textDim: "#5c5854",
+  border: "#1f1f25", bg: "#09090b", bgCard: "#131316",
+};
+const serif = "'Cormorant Garamond', serif";
+const mono = "'IBM Plex Mono', monospace";
 
 export const metadata = {
-  title: "Atlas Intelligence — Daily Briefs & Private Intelligence Platform",
-  description: "Daily intelligence briefs and a private platform for executives. Cyber, geopolitical, and risk analysis written by intelligence professionals.",
+  title: "Atlas Intelligence — Private Intelligence Platform & Daily Briefs",
+  description: "Atlas Intelligence is a private intelligence-as-a-service platform. Daily briefs and 23 intelligence modules: OSINT, breach monitoring, executive protection, dark web watch. Spy by Atlas — where intelligence professionals work.",
   alternates: { canonical: "https://atlasspy.com", types: { "application/rss+xml": "https://atlasspy.com/api/feed.xml" } },
 };
 
-// Vercel injects geo headers for every request. Free, no API call needed.
 function readVisitorLocation(h) {
   const lat = parseFloat(h.get("x-vercel-ip-latitude") || "");
   const lng = parseFloat(h.get("x-vercel-ip-longitude") || "");
@@ -38,31 +51,42 @@ export default async function HomePage() {
   const h = await headers();
   const visitor = readVisitorLocation(h);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { auth: { persistSession: false } }
-  );
-  const { data: articles } = await supabase
-    .from("articles")
-    .select("id, slug, headline, dek, category, sectors, severity, source_name, published_at")
-    .eq("published", true)
-    .order("published_at", { ascending: false })
-    .limit(7);
+  let articles = [];
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false } }
+    );
+    const result = await supabase
+      .from("articles")
+      .select("id, slug, headline, dek, category, sectors, severity, source_name, published_at")
+      .eq("published", true)
+      .order("published_at", { ascending: false })
+      .limit(7);
+    articles = result.data || [];
+  } catch {}
 
-  const lead = articles?.[0];
-  const rest = (articles || []).slice(1, 7);
+  const lead = articles[0];
+  const rest = articles.slice(1, 7);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, overflowX: "hidden" }}>
       <AtlasTicker />
       <PublicNav />
 
+      {/* 1. Hero with cropped globe (≥60% visible) */}
       <HomeHero visitor={visitor} lead={lead} />
 
-      {/* Today's brief / spotlight */}
+      {/* 2. Social proof — three subscriber quotes + momentum strip */}
+      <SocialProof />
+
+      {/* 3. Platform Showcase — depth of capability, immediately visible */}
+      <PlatformShowcase />
+
+      {/* 3. Lead brief — the daily content hook */}
       {lead && (
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 48px 0", position: "relative" }}>
+        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 48px 0" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }} className="atlas-spotlight">
             <div>
               <div style={{ fontSize: 10, fontFamily: mono, letterSpacing: 3, color: C.gold, textTransform: "uppercase", marginBottom: 18 }}>
@@ -88,7 +112,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Recent briefs grid */}
+      {/* 4. Recent briefs */}
       {rest.length > 0 && (
         <section style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 48px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 26, flexWrap: "wrap", gap: 14 }}>
@@ -103,54 +127,12 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Why Atlas / pitch — corporate, not salesy */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "120px 48px 0" }}>
-        <div style={{ textAlign: "center", marginBottom: 50 }}>
-          <div style={{ fontSize: 10, fontFamily: mono, letterSpacing: 3, color: C.gold, textTransform: "uppercase", marginBottom: 14 }}>
-            The Atlas Platform
-          </div>
-          <h2 style={{ fontFamily: serif, fontSize: 44, fontWeight: 300, margin: "0 0 16px", letterSpacing: -0.5 }}>
-            <em style={{ color: C.gold }}>Reading</em> these briefs is the floor.
-          </h2>
-          <p style={{ fontSize: 16, color: C.textSec, fontWeight: 300, maxWidth: 660, margin: "0 auto", lineHeight: 1.6 }}>
-            The platform is the ceiling. Continuous monitoring, OSINT search, breach detection, executive protection, and a senior analyst on call — for principals who need to know first.
-          </p>
-        </div>
-
-        <div className="atlas-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
-          {[
-            ["OSINT Search", "Analyst-grade research across the open and closed web."],
-            ["Breach Console", "Continuous credential exposure monitoring with formal impact assessments."],
-            ["Executive Protection", "Canary tokens, decoy deployment, and data-broker suppression."],
-            ["War Room", "Brief a senior analyst at any hour. Receive a written assessment."],
-            ["Dark Web Watch", "Forums, marketplaces, and leak sites under your name."],
-            ["Travel Security", "Pre-trip threat assessments and live-route monitoring."],
-            ["Supply-Chain Intel", "Vendor risk scoring against breach and OFAC data."],
-            ["Daily Briefs", "These — but personalised to your sector and exposure."],
-          ].map(([t, d], i) => (
-            <div key={i} style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 4, padding: 22 }}>
-              <div style={{ fontSize: 10, fontFamily: mono, letterSpacing: 1.5, color: C.gold, textTransform: "uppercase", marginBottom: 10 }}>{t}</div>
-              <p style={{ fontSize: 12, color: C.textDim, fontWeight: 300, lineHeight: 1.6, margin: 0 }}>{d}</p>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 50, flexWrap: "wrap" }}>
-          <Link href="/signup" style={{ padding: "14px 32px", border: `1px solid ${C.gold}`, background: C.gold, color: C.bg, fontSize: 11, fontFamily: mono, letterSpacing: 2, textTransform: "uppercase", textDecoration: "none", borderRadius: 3, fontWeight: 500 }}>
-            Open free account
-          </Link>
-          <Link href="/pricing" style={{ padding: "14px 32px", border: `1px solid ${C.border}`, color: C.textSec, fontSize: 11, fontFamily: mono, letterSpacing: 2, textTransform: "uppercase", textDecoration: "none", borderRadius: 3 }}>
-            Subscription tiers
-          </Link>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section style={{ maxWidth: 800, margin: "0 auto", padding: "120px 48px 0", textAlign: "center" }}>
+      {/* 5. Newsletter (when there are no articles, this becomes the primary CTA) */}
+      <section style={{ maxWidth: 800, margin: "0 auto", padding: "120px 48px 60px", textAlign: "center" }}>
         <div style={{ fontSize: 10, fontFamily: mono, letterSpacing: 3, color: C.gold, textTransform: "uppercase", marginBottom: 14 }}>The Daily Atlas</div>
         <h2 style={{ fontFamily: serif, fontSize: 38, fontWeight: 300, margin: "0 0 14px", letterSpacing: -0.5 }}>One brief, every morning at 06:00 UTC.</h2>
         <p style={{ fontSize: 14, color: C.textSec, fontWeight: 300, lineHeight: 1.65, margin: "0 0 28px", maxWidth: 540, marginLeft: "auto", marginRight: "auto" }}>
-          No marketing emails. No promotions. The day's most consequential intelligence story, written for principals.
+          The day's most consequential intelligence story. Free, no marketing emails.
         </p>
         <FooterSubscribe />
       </section>
