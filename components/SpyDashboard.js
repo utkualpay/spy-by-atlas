@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { t as T, LANGS, getLang, setLang } from "@/lib/i18n";
 import { useTranslation } from "@/lib/use-translation";
+import PersonalThreatScore from "@/components/PersonalThreatScore";
 
 // ── THEME ────────────────────────────────────────────────────────────
 const C={bg:"#09090b",bgCard:"#131316",bgHover:"#1a1a1f",bgSidebar:"#0c0c0f",bgInput:"#18181c",border:"#1f1f25",borderHover:"#2a2a32",text:"#e4e0d9",textSec:"#9d9890",textDim:"#5c5854",gold:"#c4a265",goldDim:"rgba(196,162,101,0.10)",goldMid:"rgba(196,162,101,0.20)",critical:"#c45c5c",criticalDim:"rgba(196,92,92,0.10)",high:"#c49a5c",highDim:"rgba(196,154,92,0.10)",medium:"#7c8db5",mediumDim:"rgba(124,141,181,0.10)",low:"#6b9e7a",lowDim:"rgba(107,158,122,0.10)",info:"#8b8db5",infoDim:"rgba(139,141,181,0.10)",warRed:"#8b1a1a",warRedDim:"rgba(139,26,26,0.12)",warRedBorder:"rgba(139,26,26,0.35)"};
@@ -388,7 +389,8 @@ function PgBreaches({user,isDemo}){
   const[tab,setTab]=useState("scan");const[email,setEmail]=useState(user?.email||"");const[scanning,setScanning]=useState(false);const[result,setResult]=useState(null);
   // Admin upload state
   const[uploadForm,setUploadForm]=useState({source_name:"",breach_date:"",data_types:"",total_records:"",severity:"high",raw_data:"",emails:""});const[uploading,setUploading]=useState(false);const[uploadResult,setUploadResult]=useState("");
-    const ADMIN_EMAILS=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase());
+  // Admin check is env-driven — set ADMIN_EMAILS / NEXT_PUBLIC_ADMIN_EMAILS as a comma-separated list.
+  const ADMIN_EMAILS=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase()).filter(Boolean);
   const isAdmin=user?.email&&ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   const scan=async()=>{if(!email.trim()||isDemo)return;setScanning(true);setResult(null);
@@ -1595,7 +1597,61 @@ function PgDash({go,user}){
         <div style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.7}}>All systems operational. Your daily brief is ready for generation. {CONFLICTS.filter(z=>z.sev==="critical").length} critical situations require monitoring.</div>
         <div style={{marginTop:14}}><GoldBtn small onClick={()=>go("brief")}>Open Brief</GoldBtn></div></Card></div>
     <Card style={{padding:20}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}><span style={{fontSize:10,fontFamily:mono,letterSpacing:"2px",color:C.textDim,textTransform:"uppercase"}}>Global Situation</span><button onClick={()=>go("map")} style={{background:"none",border:"none",color:C.gold,fontSize:11,cursor:"pointer"}}>Full map</button></div><WorldMap zones={CONFLICTS} sel={null} onSelect={()=>go("map")}/></Card>
+    <div style={{marginTop:16}}><PersonalThreatScore userEmail={user?.email}/></div>
     <div style={{marginTop:16}}><IPScanWidget/></div>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BEGINNER'S GUIDE — six-step walkthrough (item 10)
+// ═══════════════════════════════════════════════════════════════════
+function PgGuide({go,user}){
+  const[done,setDone]=useState(new Set());
+  const sections=[
+    {n:"01",title:"Your Command Center",desc:"This is your home base. The left sidebar lists every module organised by category. Critical metrics sit at the top. Click any section to navigate.",doThis:"Look at the sidebar. Notice the four groups: Intelligence, Investigation, Protection, Awareness.",cta:"Already here ✓",page:"dash"},
+    {n:"02",title:"Generate Today's Brief",desc:"The Daily Brief is your morning briefing. It pulls from twenty intelligence sources, scored against the world's threat surface. Generate one each morning.",doThis:"Click 'Daily Brief' in the sidebar. Hit 'Generate Brief'. Wait around ten seconds.",cta:"Open Daily Brief →",page:"brief"},
+    {n:"03",title:"Run an OSINT Search",desc:"OSINT lets you investigate any email, domain, person, company, or IP. Every search produces a formal classified-style report saved to your archive.",doThis:"Click 'OSINT Search'. Type an email, domain, or company name. Pick the type. Click Search.",cta:"Open OSINT Search →",page:"osint"},
+    {n:"04",title:"The War Room",desc:"When a question doesn't fit any module — a security incident, a strategic question, a complex assessment — go to the War Room. A senior AI analyst will walk you through it.",doThis:"Click 'War Room'. Describe the situation in plain language. The analyst responds in seconds.",cta:"Open War Room →",page:"warroom"},
+    {n:"05",title:"Set up Breach Monitoring",desc:"Continuously check whether credentials — yours or those of people you protect — have been exposed in known breaches. Add multiple emails, get alerts when new breaches appear.",doThis:"Click 'Breach Console'. Add the emails you want monitored. Run an initial scan.",cta:"Open Breach Console →",page:"breaches"},
+    {n:"06",title:"Try Decoy Deployment",desc:"Embed steganographic tracking inside any image. If the image is leaked, you can extract the tracking payload to identify the source. Real working LSB cryptography.",doThis:"Click 'Decoy Deployment'. Upload any image. Type a payload (e.g., your case ID). Click Embed, then Verify to confirm extraction.",cta:"Open Decoy Deployment →",page:"decoy"},
+  ];
+  const toggle=(n)=>{const next=new Set(done);if(next.has(n))next.delete(n);else next.add(n);setDone(next);};
+  return <div style={{animation:"fadeIn 0.4s ease"}}>
+    <SH title="Beginner's Guide" subtitle="Six steps to find your way around the platform. Walk in order or jump to whichever module interests you."/>
+    <Card style={{padding:"14px 20px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <span style={{fontSize:11,fontFamily:mono,letterSpacing:"1.5px",color:C.textDim,textTransform:"uppercase"}}>Progress</span>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        {sections.map(s=><div key={s.n} style={{width:24,height:4,borderRadius:2,background:done.has(s.n)?C.low:C.border,transition:"background 0.3s"}}/>)}
+        <span style={{fontSize:10,fontFamily:mono,letterSpacing:"1.5px",color:C.gold,marginLeft:10}}>{done.size}/{sections.length}</span>
+      </div>
+    </Card>
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {sections.map(s=>{
+        const isDone=done.has(s.n);
+        return <Card key={s.n} style={{padding:24,borderColor:isDone?"rgba(107,158,122,0.30)":C.border}}>
+          <div style={{display:"flex",gap:20,alignItems:"flex-start"}}>
+            <div style={{flexShrink:0,width:48,height:48,border:`1px solid ${isDone?C.low:C.gold}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:serif,fontSize:16,color:isDone?C.low:C.gold,background:isDone?C.lowDim:"transparent"}}>{isDone?"✓":s.n}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontFamily:serif,fontSize:20,fontWeight:400,marginBottom:6,color:C.text}}>{s.title}</div>
+              <p style={{fontSize:13,color:C.textSec,fontWeight:200,lineHeight:1.65,margin:"0 0 12px"}}>{s.desc}</p>
+              <div style={{background:C.bgInput,border:`1px solid ${C.border}`,borderRadius:3,padding:"10px 14px",marginBottom:12}}>
+                <div style={{fontSize:9,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:3}}>Do this</div>
+                <div style={{fontSize:12,color:C.text,fontWeight:300}}>{s.doThis}</div>
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {s.page!=="dash"&&<GoldBtn small onClick={()=>go(s.page)}>{s.cta}</GoldBtn>}
+                <button onClick={()=>toggle(s.n)} style={{padding:"7px 14px",background:isDone?C.lowDim:"transparent",color:isDone?C.low:C.textSec,border:`1px solid ${isDone?C.low:C.border}`,fontSize:9,fontFamily:mono,letterSpacing:"1.5px",textTransform:"uppercase",borderRadius:2,cursor:"pointer"}}>{isDone?"✓ Marked done":"Mark as done"}</button>
+              </div>
+            </div>
+          </div>
+        </Card>;
+      })}
+    </div>
+    <Card style={{padding:24,marginTop:18,textAlign:"center"}}>
+      <div style={{fontSize:11,fontFamily:mono,letterSpacing:"2px",color:C.gold,textTransform:"uppercase",marginBottom:8}}>Stuck?</div>
+      <p style={{fontSize:13,color:C.textSec,fontWeight:300,lineHeight:1.6,margin:"0 0 12px"}}>Every module has its own help text. The War Room is the most flexible tool — describe what you're trying to figure out and the analyst will guide you.</p>
+      <GoldBtn small onClick={()=>go("warroom")}>Ask the War Room →</GoldBtn>
+    </Card>
   </div>;
 }
 
@@ -1721,7 +1777,7 @@ export default function SpyDashboard({user,isDemo}){
       contextOptions={[{value:"opening",label:"Opening a new case"},{value:"mid_investigation",label:"Mid-investigation checkpoint"},{value:"closure",label:"Closure & recommendations"}]}/>;
     case"cpir":return <PgCPIR/>;
     case"notes":return <PgNotes/>;
-    case"strategic":{const ae=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase());return <PgStrategic user={user} isAdmin={user?.email&&ae.includes(user.email.toLowerCase())}/>;}
+    case"strategic":{const ae=(process.env.NEXT_PUBLIC_ADMIN_EMAILS||process.env.NEXT_PUBLIC_ADMIN_EMAIL||"atlasalpaytr@gmail.com").split(",").map(e=>e.trim().toLowerCase()).filter(Boolean);return <PgStrategic user={user} isAdmin={user?.email&&ae.includes(user.email.toLowerCase())}/>;}
     case"issue":return <PgIssue/>;
     case"aboutus":return <PgAboutUs/>;
     case"aboutdata":return <PgAboutData/>;
@@ -1746,14 +1802,7 @@ export default function SpyDashboard({user,isDemo}){
       </Card></div>;
     case"consult":return <PgAnalysis module="threat" title="Consultancy" subtitle="Describe your needs." fields={[{key:"query",label:"Subject",placeholder:"What do you need?"},{key:"context",label:"Details",placeholder:"Full requirements...",area:true}]}/>;
     case"settings":return <PgSettings user={user} isDemo={isDemo} setPage={setPage}/>;
-    case"guide":return <div style={{animation:"fadeIn 0.4s ease"}}><SH title="User Guide" subtitle="Platform architecture."/>
-      <Card style={{padding:24}}><p style={{fontSize:14,color:C.textSec,fontWeight:200,lineHeight:1.7}}>Spy by Atlas is designed and operated by intelligence professionals. Every module runs on real-world methodology.</p>
-      <div style={{marginTop:16,fontSize:12,color:C.textDim,fontWeight:200,lineHeight:1.7}}>
-        <div style={{fontFamily:mono,fontSize:10,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginBottom:8}}>Data Architecture</div>
-        <p>Your data is stored in an isolated PostgreSQL database with Row-Level Security. No data bleeds between accounts. Reports are encrypted and accessible only to you. All AI analysis runs server-side — your queries never leave our infrastructure unprotected.</p>
-        <div style={{fontFamily:mono,fontSize:10,color:C.gold,letterSpacing:"2px",textTransform:"uppercase",marginTop:16,marginBottom:8}}>Multi-Tenancy</div>
-        <p>Each user operates in a fully isolated environment. Master accounts control sub-user access. Business seats inherit organizational permissions without accessing other users' data.</p>
-      </div></Card></div>;
+    case"guide":return <PgGuide go={setPage} user={user}/>;
     default:return <PgDash go={setPage} user={user}/>;
   }};
 
@@ -1796,24 +1845,7 @@ export default function SpyDashboard({user,isDemo}){
             {subActive&&<ThreatPulse user={user}/>}
             <button onClick={()=>setCmdOpen(true)} title="Command palette (Cmd+K)" style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",border:`1px solid ${C.border}`,borderRadius:3,background:"transparent",color:C.textDim,fontSize:10,fontFamily:mono,letterSpacing:"1px",cursor:"pointer",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.color=C.gold;e.currentTarget.style.borderColor=C.gold+"60";}} onMouseLeave={e=>{e.currentTarget.style.color=C.textDim;e.currentTarget.style.borderColor=C.border;}}>⌕ ⌘K</button>
             <div style={{minWidth:80}}><Dropdown small align="right" value={lang} onChange={v=>{setLang(v);setLangState(v);}} options={LANGS.map(l=>({value:l.code,label:l.code.toUpperCase()+" — "+l.name}))}/></div>
-                                                                                            
-            {isAdmin && (
-<a
-    href="/admin"
-    title="Admin"
-    style={{
-      width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center",
-      border: `1px solid ${C.border}`, borderRadius: 4, color: C.textDim, textDecoration: "none",
-      fontSize: 11, fontFamily: mono,
-    }}
-    onMouseEnter={(e) => { e.currentTarget.style.color = C.gold; e.currentTarget.style.borderColor = C.gold; }}
-    onMouseLeave={(e) => { e.currentTarget.style.color = C.textDim; e.currentTarget.style.borderColor = C.border; }}
-  >
-    ⚙
-  </a>
-)}
-
-                                                                                            
+            {isAdmin&&<a href="/admin" title="Admin Dashboard" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:24,height:24,border:`1px solid ${C.border}`,borderRadius:3,color:C.textDim,textDecoration:"none",fontSize:11,fontFamily:mono,transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.color=C.gold;e.currentTarget.style.borderColor=C.gold+"60";}} onMouseLeave={e=>{e.currentTarget.style.color=C.textDim;e.currentTarget.style.borderColor=C.border;}}>⚙</a>}
             <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setPageScroll("settings")} title={tr("nav.settings")}>
               <div style={{width:24,height:24,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.border}`,fontSize:10,fontFamily:serif,color:C.gold}}>{(user?.name||"O")[0]}</div>
             </div>

@@ -1,16 +1,15 @@
 "use client";
-// components/AtlasGlobe.js — REVISION 2
+// components/AtlasGlobe.js — REVISION 3
 //
-// CHANGES vs v1:
-//   • Globe is now MUCH larger (radius 1.45 instead of 1.0, FOV adjusted)
-//   • `crop` prop allows showing only a portion: "right" cuts left half off-canvas,
-//     creating the "entering from the right" effect requested.
-//   • Mobile auto-detects narrow viewports and switches to a constrained centred
-//     view at smaller height — never exceeds the viewport edge.
-//   • Atmospheric halo bloom is wider (1.32 radius) for the cinematic feel.
-//   • Hotspot embers retained; visitor beacon retained.
-//
-// Three.js still loads from CDN — no new build dep.
+// CHANGES vs REV2:
+//   • Yellow halo bloom shader REMOVED. The globe is now a clean dark
+//     sphere with brass meridians only. No outer glow, no atmospheric ring.
+//   • Camera offset reduced — globe is now positioned so that ≥ 60% of
+//     the sphere is visible even when cropped from the right.
+//   • Hotspot embers retained (markers indicating conflict zones).
+//   • Visitor beacon retained (tiny champagne dot).
+//   • Mobile: full sphere centred, smaller scale, never overflows.
+//   • Surface darkening at the rim simulates depth without using a glow.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -55,16 +54,16 @@ function loadThree() {
 
 /**
  * @param {Object}   props
- * @param {Object?}  props.userLocation       - { lat, lng } visitor coords
- * @param {string}   props.crop               - "right" | "left" | "none" (desktop only)
- * @param {number}   props.height             - container height (px)
- * @param {number}   props.scale              - radius multiplier (1.0 default; >1 = bigger)
+ * @param {Object?}  props.userLocation  - { lat, lng } visitor coords
+ * @param {string}   props.crop          - "right" | "left" | "none"
+ * @param {number}   props.height        - container height (px)
+ * @param {number}   props.scale         - radius multiplier
  */
 export default function AtlasGlobe({
   userLocation = null,
   crop = "right",
   height = 720,
-  scale = 1.45,
+  scale = 1.4,
 }) {
   const containerRef = useRef(null);
   const cleanupRef = useRef(null);
@@ -90,15 +89,14 @@ export default function AtlasGlobe({
       const scene = new THREE.Scene();
       scene.background = null;
 
-      // Larger FOV with closer camera = a more dramatic, "looming" globe.
-      const camera = new THREE.PerspectiveCamera(34, w / h, 0.1, 100);
+      const camera = new THREE.PerspectiveCamera(36, w / h, 0.1, 100);
 
-      // Camera offset: when crop="right", we shift the camera LEFT so the globe
-      // appears to enter from the right side of the canvas.
-      // On mobile, we always centre the globe.
-      const horizontalShift = isMobile ? 0 : (crop === "right" ? -0.55 : crop === "left" ? 0.55 : 0);
-      const cameraDistance = isMobile ? 5.2 : 4.6;
-      camera.position.set(horizontalShift * cameraDistance, 0.3, cameraDistance);
+      // Camera shift — much smaller than rev2 so ≥60% of the sphere stays visible.
+      // crop="right" → globe centre offset slightly to the right beyond view
+      // edge, but we shift only ~20% of the radius (was 55% in rev2).
+      const horizontalShift = isMobile ? 0 : (crop === "right" ? -0.22 : crop === "left" ? 0.22 : 0);
+      const cameraDistance = isMobile ? 5.0 : 4.4;
+      camera.position.set(horizontalShift * cameraDistance, 0.25, cameraDistance);
       camera.lookAt(horizontalShift * cameraDistance, 0, 0);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -108,24 +106,26 @@ export default function AtlasGlobe({
       container.appendChild(renderer.domElement);
 
       const root = new THREE.Group();
-      root.rotation.x = 0.34;
-      // Apply mobile scale-down so the globe never overflows
-      const effectiveScale = isMobile ? Math.min(scale, 1.05) : scale;
+      root.rotation.x = 0.32;
+      const effectiveScale = isMobile ? Math.min(scale, 1.0) : scale;
       root.scale.setScalar(effectiveScale);
       scene.add(root);
 
-      // Globe core — matte near-black, very subtle warm interior
+      // Globe core — pure dark sphere. No glow, no halo.
       const coreGeo = new THREE.SphereGeometry(1, 64, 64);
-      const coreMat = new THREE.MeshBasicMaterial({ color: 0x09090b });
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0x0c0c10 });
       root.add(new THREE.Mesh(coreGeo, coreMat));
 
-      // Brass meridian wireframe
+      // Brass meridian wireframe — slightly more present (was 0.085 opacity, now 0.10)
+      // since we removed the halo and need the structure to read.
       const wireGeo = new THREE.SphereGeometry(1.001, 36, 24);
-      const wireMat = new THREE.MeshBasicMaterial({ color: 0xc4a265, wireframe: true, transparent: true, opacity: 0.085 });
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0xb8965e, wireframe: true, transparent: true, opacity: 0.11,
+      });
       root.add(new THREE.Mesh(wireGeo, wireMat));
 
-      // Anchor lines — equator + prime meridian, slightly brighter
-      const ringMat = new THREE.LineBasicMaterial({ color: 0xc4a265, transparent: true, opacity: 0.28 });
+      // Anchor lines — equator + prime meridian
+      const ringMat = new THREE.LineBasicMaterial({ color: 0xc4a265, transparent: true, opacity: 0.34 });
       const equatorPts = [];
       for (let i = 0; i <= 128; i++) {
         const t = (i / 128) * Math.PI * 2;
@@ -140,19 +140,22 @@ export default function AtlasGlobe({
       }
       root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(meridianPts), ringMat));
 
-      // Atmospheric halo — wider for the cinematic bloom
-      const haloGeo = new THREE.SphereGeometry(1.32, 48, 48);
-      const haloMat = new THREE.ShaderMaterial({
-        uniforms: { c: { value: new THREE.Color(0xc4a265) } },
+      // Subtle rim darkening — uses BackSide rendering with a flat dark shader
+      // to fake the limb of a planet without producing a yellow glow. The rim
+      // appears slightly darker than the core, which reads as depth.
+      const rimGeo = new THREE.SphereGeometry(1.012, 48, 48);
+      const rimMat = new THREE.ShaderMaterial({
+        uniforms: { c: { value: new THREE.Color(0x05050a) } },
         vertexShader: `varying vec3 vN; void main(){ vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-        fragmentShader: `uniform vec3 c; varying vec3 vN; void main(){ float i = pow(0.62 - dot(vN, vec3(0,0,1.0)), 2.4); gl_FragColor = vec4(c, 1.0) * i; }`,
+        fragmentShader: `uniform vec3 c; varying vec3 vN; void main(){ float i = pow(0.55 - dot(vN, vec3(0,0,1.0)), 2.0); gl_FragColor = vec4(c, i * 0.6); }`,
         side: THREE.BackSide,
-        blending: THREE.AdditiveBlending,
         transparent: true,
+        depthWrite: false,
       });
-      root.add(new THREE.Mesh(haloGeo, haloMat));
+      root.add(new THREE.Mesh(rimGeo, rimMat));
 
-      // Hotspot embers
+      // Hotspot embers — these are intentionally warm/red so the globe still
+      // has accent points, just not a halo.
       const markerGroup = new THREE.Group();
       root.add(markerGroup);
       HOTSPOTS.forEach((pt) => {
@@ -166,18 +169,10 @@ export default function AtlasGlobe({
         dot.position.copy(v);
         dot.userData.basePulse = Math.random() * Math.PI * 2;
         markerGroup.add(dot);
-
-        const r2 = new THREE.RingGeometry(0.025 + pt.sev * 0.01, 0.032 + pt.sev * 0.012, 16);
-        const rm = new THREE.MeshBasicMaterial({ color: dotMat.color, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
-        const ring = new THREE.Mesh(r2, rm);
-        ring.position.copy(v);
-        ring.lookAt(0, 0, 0);
-        ring.rotateY(Math.PI);
-        markerGroup.add(ring);
       });
 
-      // Visitor beacon (champagne)
-      let beacon = null, beaconRing = null;
+      // Visitor beacon (champagne — kept restrained, not yellow)
+      let beacon = null;
       if (userLocation && typeof userLocation.lat === "number" && typeof userLocation.lng === "number") {
         const v = latLngToVec3(THREE, userLocation.lat, userLocation.lng, 1.012);
         const bGeo = new THREE.SphereGeometry(0.022, 16, 16);
@@ -185,50 +180,21 @@ export default function AtlasGlobe({
         beacon = new THREE.Mesh(bGeo, bMat);
         beacon.position.copy(v);
         markerGroup.add(beacon);
-        const rGeo = new THREE.RingGeometry(0.05, 0.058, 32);
-        const rMat = new THREE.MeshBasicMaterial({ color: 0xe8d5a8, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
-        beaconRing = new THREE.Mesh(rGeo, rMat);
-        beaconRing.position.copy(v);
-        beaconRing.lookAt(0, 0, 0);
-        beaconRing.rotateY(Math.PI);
-        markerGroup.add(beaconRing);
       }
-
-      // Ambient particles (slightly more, slightly farther out — compensates for larger globe)
-      const dustGeo = new THREE.BufferGeometry();
-      const dustCount = 320;
-      const positions = new Float32Array(dustCount * 3);
-      for (let i = 0; i < dustCount; i++) {
-        const r = 1.9 + Math.random() * 1.6;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        positions[i * 3 + 2] = r * Math.cos(phi);
-      }
-      dustGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      const dustMat = new THREE.PointsMaterial({
-        color: 0xc4a265, size: 0.012, transparent: true, opacity: 0.32, sizeAttenuation: true,
-      });
-      scene.add(new THREE.Points(dustGeo, dustMat));
 
       // Animate
       let raf = 0;
       const start = performance.now();
       const tick = (now) => {
         const t = (now - start) / 1000;
-        root.rotation.y = t * (Math.PI * 2 / 90) - 1.6; // slowed slightly to 90s/rev for grandeur
+        root.rotation.y = t * (Math.PI * 2 / 90) - 1.6;
         markerGroup.children.forEach((m, i) => {
           if (m.geometry?.type === "SphereGeometry") {
             const pulse = 0.7 + 0.3 * Math.sin(t * 1.4 + (m.userData.basePulse || i));
             m.material.opacity = (m === beacon ? 1 : 0.65 * pulse + 0.25);
-            m.scale.setScalar(m === beacon ? 0.9 + 0.25 * Math.sin(t * 1.8) : pulse);
+            m.scale.setScalar(m === beacon ? 0.9 + 0.2 * Math.sin(t * 1.8) : pulse);
           }
         });
-        if (beaconRing) {
-          beaconRing.scale.setScalar(0.9 + 0.7 * ((Math.sin(t * 1.5) + 1) / 2));
-          beaconRing.material.opacity = 0.6 - 0.5 * ((Math.sin(t * 1.5) + 1) / 2);
-        }
         renderer.render(scene, camera);
         raf = requestAnimationFrame(tick);
       };
@@ -248,8 +214,7 @@ export default function AtlasGlobe({
         renderer.dispose();
         coreGeo.dispose(); coreMat.dispose();
         wireGeo.dispose(); wireMat.dispose();
-        haloGeo.dispose(); haloMat.dispose();
-        dustGeo.dispose(); dustMat.dispose();
+        rimGeo.dispose(); rimMat.dispose();
         if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
       };
     })();
@@ -267,8 +232,8 @@ export default function AtlasGlobe({
         width: "100%",
         height,
         position: "relative",
-        overflow: "hidden",                     // clips the cropped globe at canvas edge
-        background: "radial-gradient(ellipse at center, rgba(196,162,101,0.04) 0%, transparent 65%)",
+        overflow: "hidden",
+        background: "transparent",
       }}
     />
   );
